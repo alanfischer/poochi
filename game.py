@@ -11,8 +11,7 @@ TILES = {
     'mountain': ['mountain_1.png', 'mountain_2.png', 'mountain_3.png'],
     'town': ['town.png'],
     'forest': ['tree.png'],
-    'hill': ['hill_1.png', 'hill_2.png'],
-    'unknown': ['water.png']
+    'hill': ['hill_1.png', 'hill_2.png']
 }
 PLAYER_FILE = 'poochi.png'
 
@@ -33,7 +32,10 @@ class Renderable:
         self.image = image
         self.z = z
 
-class Movable:
+class Player:
+    pass
+
+class Collision:
     pass
 
 class Position:
@@ -41,17 +43,37 @@ class Position:
         self.x = x
         self.y = y
 
+class Camera:
+    def __init__(self, follow_target, width, height, zoom=1.0):
+        self.follow_target = follow_target
+        self.width, self.height = width, height
+        self.zoom = zoom
+        self.offset_x, self.offset_y = 0, 0
+
+    def update(self):
+        if self.follow_target:
+            self.offset_x = -self.follow_target.x * self.zoom + self.width // 2
+            self.offset_y = -self.follow_target.y * self.zoom + self.height // 2
+
 # Systems
 class RenderSystem(esper.Processor):
-    def __init__(self, screen):
+    def __init__(self, screen, camera):
         super().__init__()
         self.screen = screen
+        self.camera = camera
 
     def process(self):
-        entities = [(ent, *comp) for ent, comp in esper.get_components(Position, Renderable)]
-        entities.sort(key=lambda x: x[-1].z if len(x) == 3 else 0)
-        for ent, position, renderable in entities:
-            self.screen.blit(renderable.image, (position.x, position.y))
+        entities = esper.get_components(Position, Renderable)
+
+        entities.sort(key=lambda ent: ent[1][1].z)
+        
+        for _, (position, renderable) in entities:
+            x = position.x * self.camera.zoom + self.camera.offset_x
+            y = position.y * self.camera.zoom + self.camera.offset_y
+            if renderable.image != None:
+                self.screen.blit(renderable.image, (x, y))
+            else:
+                pygame.draw.rect(self.screen, (0,0,0), (x, y, TILE_SIZE, TILE_SIZE))
 
 class MovementSystem(esper.Processor):
     def __init__(self, world_map, world_size, move_speed=8):
@@ -69,16 +91,25 @@ class MovementSystem(esper.Processor):
 
     def process(self):
         keys = pygame.key.get_pressed()
-        for entity, (movable, position) in esper.get_components(Movable, Position):
+        for entity, (player, position) in esper.get_components(Player, Position):
             if entity not in self.target_positions:
                 self.target_positions[entity] = (position.x, position.y)
 
             target_x, target_y = self.target_positions[entity]
             for key, (dx, dy) in self.move_map.items():
                 if keys[key] and (position.x, position.y) == (target_x, target_y):
-                    target_x = max(0, min(position.x + dx, (self.world_size[0] - 1) * TILE_SIZE))
-                    target_y = max(0, min(position.y + dy, (self.world_size[1] - 1) * TILE_SIZE))
-                    self.target_positions[entity] = (target_x, target_y)
+                    new_x = max(0, min(position.x + dx, (self.world_size[0] - 1) * TILE_SIZE))
+                    new_y = max(0, min(position.y + dy, (self.world_size[1] - 1) * TILE_SIZE))
+
+                    # Check for collision at the new position
+                    collision = False
+                    for _, (collidable, pos) in esper.get_components(Collision, Position):
+                        if pos.x == new_x and pos.y == new_y:
+                            collision = True
+                            break
+
+                    if not collision:
+                        self.target_positions[entity] = (new_x, new_y)
 
             # Smooth movement towards the target position
             if (position.x, position.y) != (target_x, target_y):
@@ -86,7 +117,6 @@ class MovementSystem(esper.Processor):
                 y_modifier = -1 if target_y < position.y else 1
                 position.x += x_modifier * min(max(self.move_speed, target_x - position.x), self.move_speed) if target_x != position.x else 0
                 position.y += y_modifier * min(max(self.move_speed, target_y - position.y), self.move_speed) if target_y != position.y else 0
-
 
 # Initialize Pygame
 pygame.init()
@@ -100,56 +130,87 @@ tiles = {color: [pygame.image.load(file) for file in files] for color, files in 
 player_img_ = pygame.image.load(PLAYER_FILE)
 player_img = pygame.Surface((16, 16), pygame.SRCALPHA)
 player_img.blit(player_img_, (0, 0), (0, 0, 16, 16))
-player_pos = [0, 0]
+
+start_pos = None
+for x in range(world_size[0]):
+    for y in range(world_size[1]):
+        if world_map.get_at((x, y)) == COLORS['start']:
+            start_pos = (x * TILE_SIZE, y * TILE_SIZE)
+            break
+    if start_pos:
+        break
+player_pos_component = Position(*start_pos)
 
 # Create Game Window
-screen = pygame.display.set_mode((world_size[0]*TILE_SIZE, world_size[1]*TILE_SIZE))
+screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
 pygame.display.set_caption('Adventures of Poochi')
+scene_surface = pygame.Surface((640, 480), pygame.SRCALPHA)
 
 # Setup ECS
-render_system = RenderSystem(screen)
+camera = Camera(player_pos_component, scene_surface.get_width(), scene_surface.get_height())
+render_system = RenderSystem(scene_surface, camera)
 movement_system = MovementSystem(world_map, world_size)
 esper.add_processor(render_system)
 esper.add_processor(movement_system)
 
 # Create Player Entity
 player_entity = esper.create_entity()
+esper.add_component(player_entity, Player())
 esper.add_component(player_entity, Renderable(player_img, 1))
-esper.add_component(player_entity, Movable())
-esper.add_component(player_entity, Position(*player_pos))
+esper.add_component(player_entity, player_pos_component)
 
 def get_tile_from_name(name):
-    return random.choice(tiles.get(name, tiles['unknown']))
+    return random.choice(tiles.get(name, [None]))
 
-def get_tile_from_color(color):
+def get_name_from_color(color):
     for key, value in COLORS.items():
         if value == color:
-            return get_tile_from_name(key)
-    return tiles['unknown'][0]
+            return key
+    return None
 
 # Create Tile Entities
 for x in range(world_size[0]):
     for y in range(world_size[1]):
         grass = esper.create_entity()
-        esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
-        esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
 
-        terrain_image = get_tile_from_color(world_map.get_at((x, y)))
-        if terrain_image != get_tile_from_name('grass'):
+        name = get_name_from_color(world_map.get_at((x, y)))
+
+        z = 0
+        # Add grass if necessary
+        if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill':
+            grass = esper.create_entity()
+            esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
+            esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
+            z = 2
+
+        if name != 'grass':
             terrain = esper.create_entity()
-            esper.add_component(terrain, Renderable(terrain_image, 2))
+            esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
             esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
 
+            if name == 'water' or name == 'mountain':
+                esper.add_component(terrain, Collision())
+
 def game_loop():
+    global screen
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.VIDEORESIZE:
+                # Update the screen surface to the new size
+                screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+
+        # Rest of your game loop logic, such as rendering
+        camera.update()
 
         # Update ECS world
         esper.process()
 
+        scaled_surface = pygame.transform.scale(scene_surface, (screen.get_width(), screen.get_height()))
+        screen.blit(scaled_surface, (0, 0))
+    
         # Flip display
         pygame.display.flip()
 
