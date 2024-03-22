@@ -33,7 +33,10 @@ class Renderable:
         self.z = z
 
 class Player:
-    pass
+    def __init__(self, images):
+        self.images = images
+        self.direction = 'left'
+        self.frame = 0
 
 class Collision:
     pass
@@ -67,11 +70,13 @@ class RenderSystem(esper.Processor):
 
         entities.sort(key=lambda ent: ent[1][1].z)
         
-        for _, (position, renderable) in entities:
+        for entity, (position, renderable) in entities:
+            image = renderable.image
+            
             x = position.x * self.camera.zoom + self.camera.offset_x
             y = position.y * self.camera.zoom + self.camera.offset_y
-            if renderable.image != None:
-                self.screen.blit(renderable.image, (x, y))
+            if image:
+                self.screen.blit(image, (x, y))
             else:
                 pygame.draw.rect(self.screen, (0,0,0), (x, y, TILE_SIZE, TILE_SIZE))
 
@@ -91,7 +96,7 @@ class MovementSystem(esper.Processor):
 
     def process(self):
         keys = pygame.key.get_pressed()
-        for entity, (player, position) in esper.get_components(Player, Position):
+        for entity, (player, position, renderable) in esper.get_components(Player, Position, Renderable):
             if entity not in self.target_positions:
                 self.target_positions[entity] = (position.x, position.y)
 
@@ -118,6 +123,22 @@ class MovementSystem(esper.Processor):
                 position.x += x_modifier * min(max(self.move_speed, target_x - position.x), self.move_speed) if target_x != position.x else 0
                 position.y += y_modifier * min(max(self.move_speed, target_y - position.y), self.move_speed) if target_y != position.y else 0
 
+            if position.x != target_x or position.y != target_y:
+                player.frame = 1 - player.frame  # Toggle between 0 and 1
+
+            if keys[pygame.K_RIGHT]:
+                player.direction = 'right'
+                renderable.image = player.images['right'][player.frame]
+            elif keys[pygame.K_LEFT]:
+                player.direction = 'left'
+                renderable.image = player.images['left'][player.frame]
+            elif keys[pygame.K_UP]:
+                player.direction = 'up'
+                renderable.image = player.images['up'][player.frame]
+            elif keys[pygame.K_DOWN]:
+                player.direction = 'down'
+                renderable.image = player.images['down'][player.frame]
+
 # Initialize Pygame
 pygame.init()
 
@@ -127,9 +148,23 @@ world_size = world_map.get_size()
 tiles = {color: [pygame.image.load(file) for file in files] for color, files in TILES.items()}
 
 # Load Player
-player_img_ = pygame.image.load(PLAYER_FILE)
-player_img = pygame.Surface((16, 16), pygame.SRCALPHA)
-player_img.blit(player_img_, (0, 0), (0, 0, 16, 16))
+player_sheet = pygame.image.load(PLAYER_FILE)
+player_images = {
+    'left': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+    'up': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+    'down': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+    'right': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)]
+}
+
+# Extract each image
+player_images['left'][0].blit(player_sheet, (0, 0), (0, 0, 16, 16))
+player_images['left'][1].blit(player_sheet, (0, 0), (16, 0, 16, 16))
+player_images['up'][0].blit(player_sheet, (0, 0), (32, 0, 16, 16))
+player_images['up'][1] = pygame.transform.flip(player_images['up'][0], True, False)
+player_images['down'][0].blit(player_sheet, (0, 0), (48, 0, 16, 16))
+player_images['down'][1] = pygame.transform.flip(player_images['down'][0], True, False)
+player_images['right'][0] = pygame.transform.flip(player_images['left'][0], True, False)
+player_images['right'][1] = pygame.transform.flip(player_images['left'][1], True, False)
 
 start_pos = None
 for x in range(world_size[0]):
@@ -155,8 +190,8 @@ esper.add_processor(movement_system)
 
 # Create Player Entity
 player_entity = esper.create_entity()
-esper.add_component(player_entity, Player())
-esper.add_component(player_entity, Renderable(player_img, 1))
+esper.add_component(player_entity, Player(player_images))
+esper.add_component(player_entity, Renderable(player_images['left'][0], 1))
 esper.add_component(player_entity, player_pos_component)
 
 def get_tile_from_name(name):
