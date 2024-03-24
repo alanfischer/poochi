@@ -56,20 +56,82 @@ class Moveable:
         self.target_y = None
 
 class Camera:
-    def __init__(self, follow_target, width, height, zoom=1.0):
+    def __init__(self, follow_target, width, height, zoom=1.0, inner_rect_factor=0.5):
         self.follow_target = follow_target
         self.width, self.height = width, height
         self.zoom = zoom
-        self.offset_x, self.offset_y = 0, 0
+        # Initialize the camera's offset to center on the follow_target
+        self.offset_x = -self.follow_target.x * self.zoom + self.width // 2
+        self.offset_y = -self.follow_target.y * self.zoom + self.height // 2
+        # Define the inner rectangle
+        self.inner_rect_width = self.width * inner_rect_factor
+        self.inner_rect_height = self.height * inner_rect_factor
 
+        self.sliding = False
+        self.slide_time = 0.5
+        self.slide_start_time = 0
+        self.target_offset_x = self.offset_x
+        self.target_offset_y = self.offset_y
+        
+    def start_slide(self, dx, dy):
+        self.sliding = True
+        self.slide_start_time = pygame.time.get_ticks() / 1000
+        self.original_offset_x = self.offset_x
+        self.original_offset_y = self.offset_y
+        self.target_offset_x = self.offset_x + dx
+        self.target_offset_y = self.offset_y + dy
+        
     def update(self):
+        current_time = pygame.time.get_ticks() / 1000
+        if self.sliding:
+            # Calculate the fraction of the slide that is completed
+            slide_fraction = min(1, (current_time - self.slide_start_time) / self.slide_time)
+
+            # Smoothly move the camera towards the target offset
+            self.offset_x = self.original_offset_x + (self.target_offset_x - self.original_offset_x) * slide_fraction
+            self.offset_y = self.original_offset_y + (self.target_offset_y - self.original_offset_y) * slide_fraction
+
+            # Check if the slide is completed
+            if slide_fraction >= 1.0:
+                self.sliding = False
+            return
+        
         if self.follow_target:
-            self.offset_x = -self.follow_target.x * self.zoom + self.width // 2
-            self.offset_y = -self.follow_target.y * self.zoom + self.height // 2
+            # Calculate the screen position where the player should appear
+            target_x_on_screen = -self.follow_target.x * self.zoom + self.width // 2
+            target_y_on_screen = -self.follow_target.y * self.zoom + self.height // 2
+
+            # Calculate the inner rectangle's bounds
+            inner_left = self.offset_x - self.inner_rect_width // 2
+            inner_right = inner_left + self.inner_rect_width
+            inner_top = self.offset_y - self.inner_rect_height // 2
+            inner_bottom = inner_top + self.inner_rect_height
+
+            if False:
+                # Camera follows player
+                if target_x_on_screen < inner_left:
+                    self.offset_x -= self.inner_left - target_x_on_screen
+                elif target_x_on_screen > inner_right:
+                    self.offset_x += self.target_x_on_screen - inner_right
+
+                if target_y_on_screen < inner_top:
+                    self.offset_y -= self.inner_top - target_y_on_screen
+                elif target_y_on_screen > inner_bottom:
+                    self.offset_y += self.target_y_on_screen - inner_bottom
+            else:
+                # Check if the camera needs to start sliding
+                if target_x_on_screen < inner_left:
+                    self.start_slide(-self.inner_rect_width, 0)
+                elif target_x_on_screen > inner_right:
+                    self.start_slide(self.inner_rect_width, 0)
+                if target_y_on_screen < inner_top:
+                    self.start_slide(0, -self.inner_rect_height)
+                elif target_y_on_screen > inner_bottom:
+                    self.start_slide(0, self.inner_rect_height)
 
 # Systems
 class RenderSystem(esper.Processor):
-    def __init__(self, screen, camera):
+    def __init__(self, screen, camera): 
         super().__init__()
         self.screen = screen
         self.camera = camera
@@ -110,8 +172,9 @@ def terrain_at(x, y):
     return result
 
 class MovementSystem(esper.Processor):
-    def __init__(self, random_encounter_system):
+    def __init__(self, camera, random_encounter_system):
         super().__init__()
+        self.camera = camera
         self.random_encounter_system = random_encounter_system
         self.move_map = {
             pygame.K_LEFT: ((-TILE_SIZE, 0), 'left'),
@@ -121,10 +184,13 @@ class MovementSystem(esper.Processor):
         }
 
     def process(self):
-        time = pygame.time.get_ticks()  # Get the current time in milliseconds
+        if camera.sliding:
+            return
+        
+        time = pygame.time.get_ticks() / 1000
         keys = pygame.key.get_pressed()
         for entity, (player, position, moveable, renderable) in esper.get_components(Player, Position, Moveable, Renderable):
-            if time - player.last_frame_time > 300:
+            if time - player.last_frame_time > 0.3:
                 player.frame = 1 - player.frame  # Toggle between 0 and 1
                 player.last_frame_time = time  # Update the last frame switch time
 
@@ -224,7 +290,7 @@ scene_surface = pygame.Surface((640, 480), pygame.SRCALPHA)
 camera = Camera(player_pos_component, scene_surface.get_width(), scene_surface.get_height())
 render_system = RenderSystem(scene_surface, camera)
 random_encounter_system = RandomEncounterSystem()
-movement_system = MovementSystem(random_encounter_system)
+movement_system = MovementSystem(camera, random_encounter_system)
 esper.add_processor(render_system)
 esper.add_processor(movement_system)
 
