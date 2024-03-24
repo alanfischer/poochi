@@ -74,9 +74,9 @@ class MovementSystem(esper.Processor):
                 dt = (abs(x_diff) + abs(y_diff)) / self.tile_size
                 if on_hill:
                     if dt < 0.5:
-                        position.z = dt * tile_size / 2
+                        position.z = dt * self.tile_size / 2
                     else:
-                        position.z = (1 - dt) * tile_size / 2
+                        position.z = (1 - dt) * self.tile_size / 2
 
                 x_move = min(abs(x_diff), move_speed) * \
                     (1 if x_diff > 0 else -1)
