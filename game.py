@@ -37,14 +37,23 @@ class Player:
         self.images = images
         self.direction = 'left'
         self.frame = 0
+        self.last_frame_time = 0
 
-class Collision:
-    pass
+class Terrain:
+    def __init__(self, type):
+        self.type = type
 
 class Position:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.z = 0
+
+class Moveable:
+    def __init__(self):
+        self.speed = 3
+        self.target_x = None
+        self.target_y = None
 
 class Camera:
     def __init__(self, follow_target, width, height, zoom=1.0):
@@ -74,71 +83,101 @@ class RenderSystem(esper.Processor):
             image = renderable.image
             
             x = position.x * self.camera.zoom + self.camera.offset_x
-            y = position.y * self.camera.zoom + self.camera.offset_y
+            y = position.y * self.camera.zoom + self.camera.offset_y - position.z
             if image:
                 self.screen.blit(image, (x, y))
-            else:
-                pygame.draw.rect(self.screen, (0,0,0), (x, y, TILE_SIZE, TILE_SIZE))
 
-class MovementSystem(esper.Processor):
-    def __init__(self, world_map, world_size, move_speed=8):
-        super().__init__()
-        self.world_map = world_map
-        self.world_size = world_size
-        self.move_speed = move_speed  # Smaller value for smoother movement
-        self.move_map = {
-            pygame.K_LEFT: (-TILE_SIZE, 0),
-            pygame.K_RIGHT: (TILE_SIZE, 0),
-            pygame.K_UP: (0, -TILE_SIZE),
-            pygame.K_DOWN: (0, TILE_SIZE),
-        }
-        self.target_positions = {}
+class RandomEncounterSystem(esper.Processor):
+    def __init__(self, encounter_chance=0.05):
+        self.encounter_chance = encounter_chance
 
     def process(self):
+        # Check for player movement here
+        # If player moved:
+        if random.random() < self.encounter_chance:
+            self.start_encounter()
+
+    def start_encounter(self):
+        # Start the battle sequence
+        print("You ran into a slime!")
+        # Transition to battle mode
+
+def terrain_at(x, y):
+    result = None
+    for _, (terrain, pos) in esper.get_components(Terrain, Position):
+        if pos.x == x and pos.y == y:
+            result = terrain
+    return result
+
+class MovementSystem(esper.Processor):
+    def __init__(self, random_encounter_system):
+        super().__init__()
+        self.random_encounter_system = random_encounter_system
+        self.move_map = {
+            pygame.K_LEFT: ((-TILE_SIZE, 0), 'left'),
+            pygame.K_RIGHT: ((TILE_SIZE, 0), 'right'),
+            pygame.K_UP: ((0, -TILE_SIZE), 'up'),
+            pygame.K_DOWN: ((0, TILE_SIZE), 'down')
+        }
+
+    def process(self):
+        time = pygame.time.get_ticks()  # Get the current time in milliseconds
         keys = pygame.key.get_pressed()
-        for entity, (player, position, renderable) in esper.get_components(Player, Position, Renderable):
-            if entity not in self.target_positions:
-                self.target_positions[entity] = (position.x, position.y)
+        for entity, (player, position, moveable, renderable) in esper.get_components(Player, Position, Moveable, Renderable):
+            if time - player.last_frame_time > 300:
+                player.frame = 1 - player.frame  # Toggle between 0 and 1
+                player.last_frame_time = time  # Update the last frame switch time
 
-            target_x, target_y = self.target_positions[entity]
-            for key, (dx, dy) in self.move_map.items():
-                if keys[key] and (position.x, position.y) == (target_x, target_y):
-                    new_x = max(0, min(position.x + dx, (self.world_size[0] - 1) * TILE_SIZE))
-                    new_y = max(0, min(position.y + dy, (self.world_size[1] - 1) * TILE_SIZE))
+            if moveable.target_x == None or moveable.target_y == None:
+                moveable.target_x = position.x
+                moveable.target_y = position.y
 
-                    # Check for collision at the new position
-                    collision = False
-                    for _, (collidable, pos) in esper.get_components(Collision, Position):
-                        if pos.x == new_x and pos.y == new_y:
-                            collision = True
-                            break
+            # If we are are not moving moving, find next step
+            if moveable.target_x == position.x and moveable.target_y == position.y:
+                target_x, target_y = position.x, position.y
+                for key, ((dx, dy), direction) in self.move_map.items():
+                    if keys[key]:
+                        target_x, target_y = target_x + dx, target_y + dy
+                        player.direction = direction
+                        break
 
-                    if not collision:
-                        self.target_positions[entity] = (new_x, new_y)
+                collision = False
+                if (terrain := terrain_at(target_x, target_y)) is not None:
+                    collision = (terrain.type == 'mountain' or terrain.type == 'water')
+
+                if collision == False:
+                    moveable.target_x = target_x
+                    moveable.target_y = target_y
+
+            move_speed = moveable.speed
+            on_hill = False
+            if (terrain := terrain_at(moveable.target_x, moveable.target_y)) is not None:
+                if terrain.type == 'forest':
+                    move_speed = move_speed * 0.75
+                elif terrain.type == 'hill':
+                    move_speed = move_speed * 0.5
+                    on_hill = True
 
             # Smooth movement towards the target position
-            if (position.x, position.y) != (target_x, target_y):
-                x_modifier = -1 if target_x < position.x else 1
-                y_modifier = -1 if target_y < position.y else 1
-                position.x += x_modifier * min(max(self.move_speed, target_x - position.x), self.move_speed) if target_x != position.x else 0
-                position.y += y_modifier * min(max(self.move_speed, target_y - position.y), self.move_speed) if target_y != position.y else 0
+            if (position.x, position.y) != (moveable.target_x, moveable.target_y):
+                x_diff = moveable.target_x - position.x
+                y_diff = moveable.target_y - position.y
+                
+                dt = (abs(x_diff) + abs(y_diff)) / TILE_SIZE
+                if on_hill:
+                    if dt < 0.5:
+                        position.z = dt * TILE_SIZE / 2
+                    else:
+                        position.z = (1 - dt) * TILE_SIZE / 2
+                
+                x_move = min(abs(x_diff), move_speed) * (1 if x_diff > 0 else -1)
+                y_move = min(abs(y_diff), move_speed) * (1 if y_diff > 0 else -1)
 
-            if position.x != target_x or position.y != target_y:
-                player.frame = 1 - player.frame  # Toggle between 0 and 1
+                position.x += x_move if moveable.target_x != position.x else 0
+                position.y += y_move if moveable.target_y != position.y else 0
 
-            if keys[pygame.K_RIGHT]:
-                player.direction = 'right'
-                renderable.image = player.images['right'][player.frame]
-            elif keys[pygame.K_LEFT]:
-                player.direction = 'left'
-                renderable.image = player.images['left'][player.frame]
-            elif keys[pygame.K_UP]:
-                player.direction = 'up'
-                renderable.image = player.images['up'][player.frame]
-            elif keys[pygame.K_DOWN]:
-                player.direction = 'down'
-                renderable.image = player.images['down'][player.frame]
-
+            renderable.image = player.images[player.direction][player.frame]
+     
 # Initialize Pygame
 pygame.init()
 
@@ -184,14 +223,16 @@ scene_surface = pygame.Surface((640, 480), pygame.SRCALPHA)
 # Setup ECS
 camera = Camera(player_pos_component, scene_surface.get_width(), scene_surface.get_height())
 render_system = RenderSystem(scene_surface, camera)
-movement_system = MovementSystem(world_map, world_size)
+random_encounter_system = RandomEncounterSystem()
+movement_system = MovementSystem(random_encounter_system)
 esper.add_processor(render_system)
 esper.add_processor(movement_system)
 
 # Create Player Entity
 player_entity = esper.create_entity()
 esper.add_component(player_entity, Player(player_images))
-esper.add_component(player_entity, Renderable(player_images['left'][0], 1))
+esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
+esper.add_component(player_entity, Moveable())
 esper.add_component(player_entity, player_pos_component)
 
 def get_tile_from_name(name):
@@ -208,23 +249,26 @@ for x in range(world_size[0]):
     for y in range(world_size[1]):
         grass = esper.create_entity()
 
-        name = get_name_from_color(world_map.get_at((x, y)))
+        color = world_map.get_at((x, y))
+        name = get_name_from_color(color)
 
         z = 0
         # Add grass if necessary
-        if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill':
+        if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill' or get_tile_from_name(name) == None:
             grass = esper.create_entity()
             esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
             esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
-            z = 2
+            esper.add_component(grass, Terrain('grass'))
+            if name == 'hill' or name == 'town':
+                z = 1
+            else:
+                z = 3
 
         if name != 'grass':
             terrain = esper.create_entity()
             esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
             esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
-
-            if name == 'water' or name == 'mountain':
-                esper.add_component(terrain, Collision())
+            esper.add_component(terrain, Terrain(name))
 
 def game_loop():
     global screen
