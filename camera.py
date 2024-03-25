@@ -1,7 +1,8 @@
 import pygame
+import esper
 
 
-class Camera:
+class CameraSystem(esper.Processor):
     def __init__(self, follow_target, width, height, zoom=1.0, inner_rect_factor=0.5):
         self.follow_target = follow_target
         self.width, self.height = width, height
@@ -27,7 +28,7 @@ class Camera:
         self.target_offset_x = self.offset_x + dx
         self.target_offset_y = self.offset_y + dy
 
-    def update(self):
+    def process(self, dt):
         current_time = pygame.time.get_ticks() / 1000
         if self.sliding:
             # Calculate the fraction of the slide that is completed

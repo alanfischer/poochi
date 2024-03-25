@@ -7,7 +7,9 @@ class RenderSystem(esper.Processor):
         self.screen = screen
         self.camera = camera
 
-    def process(self):
+    def process(self, dt):
+        self.screen.fill((0,0,0))
+
         entities = esper.get_components(Position, Renderable)
 
         entities.sort(key=lambda ent: ent[1][1].z)

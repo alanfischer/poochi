@@ -23,6 +23,9 @@ class Moveable:
         self.speed = 3
         self.target_x = None
         self.target_y = None
+        self.moved = False
+        self.velocity_y = 0
+        self.on_ground = True
 
 
 class Renderable:

@@ -6,6 +6,7 @@ from camera import *
 from render import *
 from encounter import *
 from movement import *
+from battle_movement import *
 
 # Game Constants
 TILE_SIZE = 16
@@ -37,8 +38,7 @@ pygame.init()
 # Load World Map
 world_map = pygame.image.load(MAP_FILE)
 world_size = world_map.get_size()
-tiles = {color: [pygame.image.load(file) for file in files]
-         for color, files in TILES.items()}
+tiles = {color: [pygame.image.load(file) for file in files] for color, files in TILES.items()}
 
 # Load Player
 player_sheet = pygame.image.load(PLAYER_FILE)
@@ -53,15 +53,11 @@ player_images = {
 player_images['left'][0].blit(player_sheet, (0, 0), (0, 0, 16, 16))
 player_images['left'][1].blit(player_sheet, (0, 0), (16, 0, 16, 16))
 player_images['up'][0].blit(player_sheet, (0, 0), (32, 0, 16, 16))
-player_images['up'][1] = pygame.transform.flip(
-    player_images['up'][0], True, False)
+player_images['up'][1] = pygame.transform.flip(player_images['up'][0], True, False)
 player_images['down'][0].blit(player_sheet, (0, 0), (48, 0, 16, 16))
-player_images['down'][1] = pygame.transform.flip(
-    player_images['down'][0], True, False)
-player_images['right'][0] = pygame.transform.flip(
-    player_images['left'][0], True, False)
-player_images['right'][1] = pygame.transform.flip(
-    player_images['left'][1], True, False)
+player_images['down'][1] = pygame.transform.flip(player_images['down'][0], True, False)
+player_images['right'][0] = pygame.transform.flip(player_images['left'][0], True, False)
+player_images['right'][1] = pygame.transform.flip(player_images['left'][1], True, False)
 
 start_pos = None
 for x in range(world_size[0]):
@@ -71,33 +67,50 @@ for x in range(world_size[0]):
             break
     if start_pos:
         break
-player_pos_component = Position(*start_pos)
 
 # Create Game Window
 screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
 pygame.display.set_caption('Adventures of Poochi')
 scene_surface = pygame.Surface((640, 480), pygame.SRCALPHA)
 
-# Setup ECS
-camera = Camera(player_pos_component, scene_surface.get_width(),
-                scene_surface.get_height())
-render_system = RenderSystem(scene_surface, camera)
-encounter_system = EncounterSystem()
-movement_system = MovementSystem(camera, encounter_system, TILE_SIZE)
-esper.add_processor(render_system)
-esper.add_processor(movement_system)
+def setup_map():
+    esper.switch_world("map")
 
-# Create Player Entity
-player_entity = esper.create_entity()
-esper.add_component(player_entity, Player(player_images))
-esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-esper.add_component(player_entity, Moveable())
-esper.add_component(player_entity, player_pos_component)
+    player_entity = esper.create_entity()
+    esper.add_component(player_entity, Player(player_images))
+    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
+    esper.add_component(player_entity, Moveable())
+    esper.add_component(player_entity, Position(*start_pos))
+
+    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
+    render_system = RenderSystem(scene_surface, camera_system)
+    encounter_system = EncounterSystem()
+    movement_system = MovementSystem(camera_system, TILE_SIZE)
+    esper.add_processor(camera_system)
+    esper.add_processor(render_system)
+    esper.add_processor(movement_system)
+    esper.add_processor(encounter_system)
+
+
+def setup_battle():
+    esper.switch_world("battle")
+
+    player_entity = esper.create_entity()
+    esper.add_component(player_entity, Player(player_images))
+    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
+    esper.add_component(player_entity, Moveable())
+    esper.add_component(player_entity, Position(0,0))
+
+    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
+    render_system = RenderSystem(scene_surface, camera_system)
+    movement_system = BattleMovementSystem()
+    esper.add_processor(camera_system)
+    esper.add_processor(render_system)
+    esper.add_processor(movement_system)
 
 
 def get_tile_from_name(name):
     return random.choice(tiles.get(name, [None]))
-
 
 def get_name_from_color(color):
     for key, value in COLORS.items():
@@ -105,6 +118,10 @@ def get_name_from_color(color):
             return key
     return None
 
+setup_map()
+setup_battle()
+
+esper.switch_world("map")
 
 # Create Tile Entities
 for x in range(world_size[0]):
@@ -118,8 +135,7 @@ for x in range(world_size[0]):
         # Add grass if necessary
         if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill' or get_tile_from_name(name) == None:
             grass = esper.create_entity()
-            esper.add_component(grass, Renderable(
-                get_tile_from_name('grass'), 0))
+            esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
             esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
             esper.add_component(grass, Terrain('grass'))
             if name == 'hill' or name == 'town':
@@ -129,40 +145,35 @@ for x in range(world_size[0]):
 
         if name != 'grass':
             terrain = esper.create_entity()
-            esper.add_component(terrain, Renderable(
-                get_tile_from_name(name), z))
-            esper.add_component(terrain, Position(
-                x * TILE_SIZE, y * TILE_SIZE))
+            esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+            esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
             esper.add_component(terrain, Terrain(name))
 
+clock = pygame.time.Clock()
 
 def game_loop():
     global screen
     running = True
     while running:
+        dt = clock.tick(60) / 1000.0  # Time elapsed in seconds since last tick
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.VIDEORESIZE:
                 # Update the screen surface to the new size
-                screen = pygame.display.set_mode(
-                    (event.w, event.h), pygame.RESIZABLE)
-
-        # Rest of your game loop logic, such as rendering
-        camera.update()
+                screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
         # Update ECS world
-        esper.process()
+        esper.process(dt)
 
-        scaled_surface = pygame.transform.scale(
-            scene_surface, (screen.get_width(), screen.get_height()))
+        scaled_surface = pygame.transform.scale(scene_surface, (screen.get_width(), screen.get_height()))
         screen.blit(scaled_surface, (0, 0))
-
+    
         # Flip display
         pygame.display.flip()
 
     pygame.quit()
-
 
 # Start the game
 game_loop()

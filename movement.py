@@ -12,10 +12,9 @@ def terrain_at(x, y):
 
 
 class MovementSystem(esper.Processor):
-    def __init__(self, camera, random_encounter_system, tile_size):
+    def __init__(self, camera, tile_size):
         super().__init__()
         self.camera = camera
-        self.random_encounter_system = random_encounter_system
         self.tile_size = tile_size
         self.move_map = {
             pygame.K_LEFT: ((-tile_size, 0), 'left'),
@@ -24,7 +23,7 @@ class MovementSystem(esper.Processor):
             pygame.K_DOWN: ((0, tile_size), 'down')
         }
 
-    def process(self):
+    def process(self, dt):
         if self.camera.sliding:
             return
 
@@ -39,7 +38,7 @@ class MovementSystem(esper.Processor):
                 moveable.target_x = position.x
                 moveable.target_y = position.y
 
-            # If we are are not moving moving, find next step
+            # If we are are not moving, find next step
             if moveable.target_x == position.x and moveable.target_y == position.y:
                 target_x, target_y = position.x, position.y
                 for key, ((dx, dy), direction) in self.move_map.items():
@@ -85,5 +84,8 @@ class MovementSystem(esper.Processor):
 
                 position.x += x_move if moveable.target_x != position.x else 0
                 position.y += y_move if moveable.target_y != position.y else 0
+
+                if position.x == moveable.target_x and position.y == moveable.target_y:
+                    moveable.moved = True
 
             renderable.image = player.images[player.direction][player.frame]
