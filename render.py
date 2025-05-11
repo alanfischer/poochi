@@ -2,13 +2,15 @@ import esper
 from components import *
 
 class RenderSystem(esper.Processor):
-    def __init__(self, screen, camera):
+    def __init__(self, screen, camera, background = None):
         super().__init__()
         self.screen = screen
         self.camera = camera
+        self.background = background
 
     def process(self, dt):
-        self.screen.fill((0,0,0))
+        if self.background:
+            self.screen.blit(self.background, (0, 0))
 
         entities = esper.get_components(Position, Renderable)
 

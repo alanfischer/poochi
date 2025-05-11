@@ -32,6 +32,8 @@ COLORS = {
     'start': (255, 0, 255, 255)
 }
 
+BACKGROUND_FILE = 'grass_background.png'
+
 # Initialize Pygame
 pygame.init()
 
@@ -71,7 +73,7 @@ for x in range(world_size[0]):
 # Create Game Window
 screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
 pygame.display.set_caption('Adventures of Poochi')
-scene_surface = pygame.Surface((640, 480), pygame.SRCALPHA)
+scene_surface = pygame.Surface((320, 240), pygame.SRCALPHA)
 
 def setup_map():
     esper.switch_world("map")
@@ -84,7 +86,7 @@ def setup_map():
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system)
-    encounter_system = EncounterSystem()
+    encounter_system = EncounterSystem(.5)
     movement_system = MovementSystem(camera_system, TILE_SIZE)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
@@ -95,14 +97,17 @@ def setup_map():
 def setup_battle():
     esper.switch_world("battle")
 
+    background = pygame.image.load(BACKGROUND_FILE)
+    background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
+
     player_entity = esper.create_entity()
     esper.add_component(player_entity, Player(player_images))
     esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
     esper.add_component(player_entity, Moveable())
     esper.add_component(player_entity, Position(0,0))
 
-    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
-    render_system = RenderSystem(scene_surface, camera_system)
+    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
+    render_system = RenderSystem(scene_surface, camera_system, background)
     movement_system = BattleMovementSystem()
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
