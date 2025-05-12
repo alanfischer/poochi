@@ -10,7 +10,7 @@ from battle_movement import *
 
 # Game Constants
 TILE_SIZE = 16
-MAP_FILE = 'dad_map.png'
+MAP_FILE = 'hogwarts.png'
 TILES = {
     'grass': ['grass.png'],
     'water': ['water.png'],
@@ -19,7 +19,7 @@ TILES = {
     'forest': ['tree.png'],
     'hill': ['hill_1.png', 'hill_2.png']
 }
-PLAYER_FILE = 'poochi.png'
+PLAYER_FILE = 'harry.png'
 
 # Colors
 COLORS = {
@@ -29,7 +29,7 @@ COLORS = {
     'forest': (0, 143, 0, 255),
     'hill': (146, 144, 0, 255),
     'town': (148, 82, 0, 255),
-    'start': (255, 0, 255, 255)
+    'start': (182, 234, 255, 255)
 }
 
 BACKGROUND_FILE = 'grass_background.png'
@@ -45,21 +45,21 @@ tiles = {color: [pygame.image.load(file) for file in files] for color, files in 
 # Load Player
 player_sheet = pygame.image.load(PLAYER_FILE)
 player_images = {
-    'left': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
-    'up': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
-    'down': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
-    'right': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)]
+    'left': [pygame.Surface((6, 16), pygame.SRCALPHA), pygame.Surface((6, 16), pygame.SRCALPHA)],
+    'up': [pygame.Surface((8, 16), pygame.SRCALPHA), pygame.Surface((8, 16), pygame.SRCALPHA)],
+    'down': [pygame.Surface((8, 16), pygame.SRCALPHA), pygame.Surface((8, 16), pygame.SRCALPHA)],
+    'right': [pygame.Surface((6, 16), pygame.SRCALPHA), pygame.Surface((6, 16), pygame.SRCALPHA)]
 }
 
 # Extract each image
-player_images['left'][0].blit(player_sheet, (0, 0), (0, 0, 16, 16))
-player_images['left'][1].blit(player_sheet, (0, 0), (16, 0, 16, 16))
-player_images['up'][0].blit(player_sheet, (0, 0), (32, 0, 16, 16))
-player_images['up'][1] = pygame.transform.flip(player_images['up'][0], True, False)
-player_images['down'][0].blit(player_sheet, (0, 0), (48, 0, 16, 16))
-player_images['down'][1] = pygame.transform.flip(player_images['down'][0], True, False)
-player_images['right'][0] = pygame.transform.flip(player_images['left'][0], True, False)
-player_images['right'][1] = pygame.transform.flip(player_images['left'][1], True, False)
+player_images['right'][0].blit(player_sheet, (0, 0), (32, 0, 6, 16))
+player_images['right'][1].blit(player_sheet, (0, 0), (38, 0, 6, 16))
+player_images['up'][0].blit(player_sheet, (0, 0), (16, 0, 8, 16))
+player_images['up'][1].blit(player_sheet, (0, 0), (24, 0, 8, 16))
+player_images['down'][0].blit(player_sheet, (0, 0), (0, 0, 8, 16))
+player_images['down'][1].blit(player_sheet, (0, 0), (8, 0, 8, 16))
+player_images['left'][0] = pygame.transform.flip(player_images['right'][0], True, False)
+player_images['left'][1] = pygame.transform.flip(player_images['right'][1], True, False)
 
 start_pos = None
 for x in range(world_size[0]):
@@ -85,8 +85,8 @@ def setup_map():
     esper.add_component(player_entity, Position(*start_pos))
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
-    render_system = RenderSystem(scene_surface, camera_system)
-    encounter_system = EncounterSystem(.5)
+    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
+    encounter_system = EncounterSystem(0)#.5)
     movement_system = MovementSystem(camera_system, TILE_SIZE)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
@@ -107,7 +107,7 @@ def setup_battle():
     esper.add_component(player_entity, Position(0,0))
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
-    render_system = RenderSystem(scene_surface, camera_system, background)
+    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
     movement_system = BattleMovementSystem()
     esper.add_processor(camera_system)
     esper.add_processor(render_system)

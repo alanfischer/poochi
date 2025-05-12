@@ -20,7 +20,7 @@ class Position:
 
 class Moveable:
     def __init__(self):
-        self.speed = 3
+        self.speed = 2
         self.target_x = None
         self.target_y = None
         self.moved = False
