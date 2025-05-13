@@ -248,7 +248,7 @@ class RenderSystem(esper.Processor):
                 self.update_entities(entities)
 
         rendered_count = 0
-        total_count = 0#len(entities)
+        total_count = 0
         
         # Calculate visible area in world coordinates
         left = (-self.camera.offset_x - self.tile_size) / self.camera.zoom
@@ -275,12 +275,15 @@ class RenderSystem(esper.Processor):
             if not image:
                 continue
 
-            x = position.x * self.camera.zoom + self.camera.offset_x
-            y = position.y * self.camera.zoom + self.camera.offset_y - position.z
+            # Calculate screen position for the center point
+            center_x = position.x * self.camera.zoom + self.camera.offset_x
+            center_y = position.y * self.camera.zoom + self.camera.offset_y - position.z
             
-            offset_x = (self.tile_size - image.get_width()) / 2
-            offset_y = (self.tile_size - image.get_height()) / 2
-            self.screen.blit(image, (x + offset_x, y + offset_y))
+            # Offset by half the sprite dimensions to center the sprite at the position
+            x = center_x - image.get_width() // 2
+            y = center_y - image.get_height() // 2
+            
+            self.screen.blit(image, (x, y))
             rendered_count += 1
 
         self.profiler.disable()
@@ -288,9 +291,9 @@ class RenderSystem(esper.Processor):
         self.frame_times.append(end_time - start_time)
         self.frames_since_last_stats += 1
         
-        self.print_stats()
+        #self.print_stats()
 
-        if total_count > 0:
-            culling_status = "enabled" if self.enable_culling else "disabled"
-            quadtree_status = "enabled" if self.enable_quadtree else "disabled"
-            print(f"\rFrame: Rendered {rendered_count}/{total_count} entities ({(rendered_count/total_count)*100:.1f}%) - Culling {culling_status} - Quadtree {quadtree_status}", end="")
+        #if total_count > 0:
+        #    culling_status = "enabled" if self.enable_culling else "disabled"
+        #    quadtree_status = "enabled" if self.enable_quadtree else "disabled"
+        #    print(f"\rFrame: Rendered {rendered_count}/{total_count} entities ({(rendered_count/total_count)*100:.1f}%) - Culling {culling_status} - Quadtree {quadtree_status}", end="")

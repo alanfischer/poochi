@@ -12,6 +12,9 @@ class BattleMovementSystem(esper.Processor):
         self.jump_strength = jump_strength
         self.move_speed = move_speed
         self.ground_y_position = 16*5
+        # Add boundary constraints
+        self.left_boundary = -140
+        self.right_boundary = 140
 
     def animate(self, player):
         time = pygame.time.get_ticks() / 1000
@@ -23,6 +26,9 @@ class BattleMovementSystem(esper.Processor):
         keys = pygame.key.get_pressed()
 
         for entity, (player, position, moveable, renderable) in esper.get_components(Player, Position, Moveable, Renderable):
+            # Store original position for boundary checking
+            original_x = position.x
+            
             # Horizontal Movement
             if keys[pygame.K_LEFT]:
                 position.x -= self.move_speed
@@ -33,10 +39,16 @@ class BattleMovementSystem(esper.Processor):
                 player.direction = 'right'
                 self.animate(player)
 
+            # Enforce horizontal boundaries
+            if position.x < self.left_boundary:
+                position.x = self.left_boundary
+            elif position.x > self.right_boundary:
+                position.x = self.right_boundary
+
             if keys[pygame.K_SPACE] and moveable.on_ground:
                 moveable.velocity_y = -self.jump_strength
                 moveable.on_ground = False
-            
+
             if keys[pygame.K_ESCAPE]:
                 for processor in esper._processors:
                     if isinstance(processor, EncounterSystem):

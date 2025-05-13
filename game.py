@@ -12,18 +12,23 @@ from battle_movement import *
 TILE_SIZE = 16
 MAP_FILE = 'hogwarts.png'
 TILES = {
+    # World
     'grass': ['grass.png'],
     'water': ['water.png'],
     'mountain': ['mountain_1.png', 'mountain_2.png', 'mountain_3.png'],
     'town': ['town.png'],
     'forest': ['tree.png'],
-    'hill': ['hill_1.png', 'hill_2.png']
+    'hill': ['hill_1.png', 'hill_2.png'],
+
+    # Battle
+    'ledge': ['forest_ledge.png']
 }
 PLAYER_FILE = 'harry.png'
 
 BACKGROUND_FILE = 'grass_background.png'
 
 COLORS = {
+    # World
     'grass': (0, 249, 0, 255),
     'water': (4, 51, 255, 255),
     'hill': (219, 116, 114, 255),
@@ -31,7 +36,10 @@ COLORS = {
     'mountain': (48, 48, 48, 255),
     'town': (0, 82, 0, 255),
     'path': (148, 82, 0, 255),
-    'start': (182, 234, 255, 255)
+    'start': (182, 234, 255, 255),
+
+    # Battle
+    'ledge': (133, 108, 68, 255)
 }
 
 # Cache path sprites
@@ -97,51 +105,11 @@ screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
 pygame.display.set_caption('Adventures of Poochi')
 scene_surface = pygame.Surface((320, 240), pygame.SRCALPHA)
 
-encounter_system = EncounterSystem(0.1)
-
-def setup_map():
-    esper.switch_world("map")
-
-    player_entity = esper.create_entity()
-    esper.add_component(player_entity, Player(player_images))
-    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-    esper.add_component(player_entity, Moveable(1))
-    esper.add_component(player_entity, Position(*start_pos))
-
-    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
-    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
-    movement_system = MovementSystem(camera_system, TILE_SIZE)
-    esper.add_processor(camera_system)
-    esper.add_processor(render_system)
-    esper.add_processor(movement_system)
-    esper.add_processor(encounter_system)
-
-
-def setup_battle():
-    esper.switch_world("battle")
-
-    background = pygame.image.load(BACKGROUND_FILE)
-    background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
-
-    player_entity = esper.create_entity()
-    esper.add_component(player_entity, Player(player_images))
-    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-    esper.add_component(player_entity, Moveable(2))
-    esper.add_component(player_entity, Position(0,0))
-
-    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
-    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
-    movement_system = BattleMovementSystem()
-    esper.add_processor(camera_system)
-    esper.add_processor(render_system)
-    esper.add_processor(movement_system)
-    esper.add_processor(encounter_system)
-
 
 def get_tile_from_name(name):
     return random.choice(tiles.get(name, [None]))
 
-def get_name_from_color(color):
+def get_tile_name_from_color(color):
     for key, value in COLORS.items():
         if value == color:
             return key
@@ -203,43 +171,101 @@ def get_path_sprite(connections):
     # Otherwise use horizontal sprite (default)
     return PATH_SPRITES['horizontal']
 
+
+encounter_system = EncounterSystem(0.1)
+
+def setup_map():
+    esper.switch_world("map")
+
+    player_entity = esper.create_entity()
+    esper.add_component(player_entity, Player(player_images))
+    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
+    esper.add_component(player_entity, Moveable(1))
+    esper.add_component(player_entity, Position(*start_pos))
+
+    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
+    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
+    movement_system = MovementSystem(camera_system, TILE_SIZE)
+    esper.add_processor(camera_system)
+    esper.add_processor(render_system)
+    esper.add_processor(movement_system)
+    esper.add_processor(encounter_system)
+
+    for x in range(world_size[0]):
+        for y in range(world_size[1]):
+            grass = esper.create_entity()
+
+            color = world_map.get_at((x, y))
+            name = get_tile_name_from_color(color)
+
+            z = 0
+            # Add grass if necessary
+            if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill' or get_tile_from_name(name) == None:
+                grass = esper.create_entity()
+                esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
+                esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
+                esper.add_component(grass, Terrain('grass'))
+                if name == 'hill' or name == 'town' or name == 'path':
+                    z = 1
+                else:
+                    z = 3
+
+            if name != 'grass':
+                terrain = esper.create_entity()
+                # Special handling for path tiles
+                if name == 'path':
+                    connections = get_path_connections(x, y, world_map)
+                    path_sprite = get_path_sprite(connections)
+                    esper.add_component(terrain, Renderable(path_sprite, z))
+                    esper.add_component(terrain, connections)
+                else:
+                    esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+                esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
+                esper.add_component(terrain, Terrain(name))
+
+
+def setup_battle(name):
+    esper.switch_world("battle_" + name)
+
+    background = pygame.image.load(name + "_background.png")
+    background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
+
+    player_entity = esper.create_entity()
+    esper.add_component(player_entity, Player(player_images))
+    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
+    esper.add_component(player_entity, Moveable(2))
+    esper.add_component(player_entity, Position(0,0))
+
+    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
+    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
+    movement_system = BattleMovementSystem()
+    esper.add_processor(camera_system)
+    esper.add_processor(render_system)
+    esper.add_processor(movement_system)
+    esper.add_processor(encounter_system)
+
+    battle_map = pygame.image.load(name + "_map.png")
+    battle_size = battle_map.get_size()
+
+    for x in range(battle_size[0]):
+        for y in range(battle_size[1]):
+            grass = esper.create_entity()
+
+            color = battle_map.get_at((x, y))
+            name = get_tile_name_from_color(color)
+
+            z = 0
+
+            if name == 'ledge':
+                terrain = esper.create_entity()
+                esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+                esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
+
 setup_map()
-setup_battle()
+
+setup_battle("grass")
 
 esper.switch_world("map")
-
-# Create Tile Entities
-for x in range(world_size[0]):
-    for y in range(world_size[1]):
-        grass = esper.create_entity()
-
-        color = world_map.get_at((x, y))
-        name = get_name_from_color(color)
-
-        z = 0
-        # Add grass if necessary
-        if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill' or get_tile_from_name(name) == None:
-            grass = esper.create_entity()
-            esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
-            esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
-            esper.add_component(grass, Terrain('grass'))
-            if name == 'hill' or name == 'town' or name == 'path':
-                z = 1
-            else:
-                z = 3
-
-        if name != 'grass':
-            terrain = esper.create_entity()
-            # Special handling for path tiles
-            if name == 'path':
-                connections = get_path_connections(x, y, world_map)
-                path_sprite = get_path_sprite(connections)
-                esper.add_component(terrain, Renderable(path_sprite, z))
-                esper.add_component(terrain, connections)
-            else:
-                esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
-            esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
-            esper.add_component(terrain, Terrain(name))
 
 clock = pygame.time.Clock()
 

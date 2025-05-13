@@ -18,7 +18,7 @@ class EncounterSystem(esper.Processor):
 
     def start_encounter(self):
         pygame.mixer.music.pause()
-        esper.switch_world('battle')
+        esper.switch_world('battle_grass')
         self.in_encounter = True
 
     def end_encounter(self):
