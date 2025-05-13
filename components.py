@@ -32,3 +32,11 @@ class Renderable:
     def __init__(self, image, z):
         self.image = image
         self.z = z
+
+
+class PathConnections:
+    def __init__(self):
+        self.up = False
+        self.down = False
+        self.left = False
+        self.right = False

@@ -21,18 +21,36 @@ TILES = {
 }
 PLAYER_FILE = 'harry.png'
 
-# Colors
+BACKGROUND_FILE = 'grass_background.png'
+
 COLORS = {
     'grass': (0, 249, 0, 255),
     'water': (4, 51, 255, 255),
     'hill': (219, 116, 114, 255),
     'forest': (0, 143, 0, 255),
-    'mountain': (146, 144, 0, 255),
-    'town': (148, 82, 0, 255),
+    'mountain': (48, 48, 48, 255),
+    'town': (0, 82, 0, 255),
+    'path': (148, 82, 0, 255),
     'start': (182, 234, 255, 255)
 }
 
-BACKGROUND_FILE = 'grass_background.png'
+# Cache path sprites
+PATH_SPRITES = {
+    'horizontal': pygame.image.load('path-horizontal.png'),
+    'vertical': pygame.image.load('path-vertical.png'),
+    'split_up': pygame.image.load('3_split_up.png'),
+    'split_down': pygame.image.load('3_split_down.png'),
+    'split_left': pygame.image.load('3_split_left.png'),
+    'split_right': pygame.image.load('3_split_right.png'),
+    'left_to_bottom': pygame.image.load('left_to_bottom_path.png'),
+    'bottom_to_right': pygame.image.load('bottom_to_right_path.png'),
+    'right_to_top': pygame.image.load('right_to_top_path.png'),
+    'top_to_left': pygame.image.load('top_to_left_path.png'),
+    'top_end': pygame.image.load('top_path_end.png'),
+    'bottom_end': pygame.image.load('bottom_path_end.png'),
+    'left_end': pygame.image.load('left_path_end.png'),
+    'right_end': pygame.image.load('right_path_end.png')
+}
 
 # Initialize Pygame
 pygame.init()
@@ -129,6 +147,62 @@ def get_name_from_color(color):
             return key
     return None
 
+def get_path_connections(x, y, world_map):
+    connections = PathConnections()
+    path_color = COLORS['path']
+    
+    # Check adjacent tiles
+    if y > 0 and world_map.get_at((x, y - 1)) == path_color:
+        connections.up = True
+    if y < world_map.get_height() - 1 and world_map.get_at((x, y + 1)) == path_color:
+        connections.down = True
+    if x > 0 and world_map.get_at((x - 1, y)) == path_color:
+        connections.left = True
+    if x < world_map.get_width() - 1 and world_map.get_at((x + 1, y)) == path_color:
+        connections.right = True
+        
+    return connections
+
+def get_path_sprite(connections):
+    # Check for 3-way splits first
+    if connections.left and connections.right:
+        if connections.up and not connections.down:
+            return PATH_SPRITES['split_up']
+        elif connections.down and not connections.up:
+            return PATH_SPRITES['split_down']
+    if connections.up and connections.down:
+        if connections.left and not connections.right:
+            return PATH_SPRITES['split_left']
+        elif connections.right and not connections.left:
+            return PATH_SPRITES['split_right']
+    
+    # Check for curved paths (corners)
+    if connections.left and connections.down and not connections.right and not connections.up:
+        return PATH_SPRITES['left_to_bottom']
+    if connections.down and connections.right and not connections.left and not connections.up:
+        return PATH_SPRITES['bottom_to_right']
+    if connections.right and connections.up and not connections.left and not connections.down:
+        return PATH_SPRITES['right_to_top']
+    if connections.up and connections.left and not connections.right and not connections.down:
+        return PATH_SPRITES['top_to_left']
+    
+    # Check for path ends (only one connection)
+    if connections.up and not (connections.down or connections.left or connections.right):
+        return PATH_SPRITES['bottom_end']  # Path ends at bottom, connects upward
+    if connections.down and not (connections.up or connections.left or connections.right):
+        return PATH_SPRITES['top_end']  # Path ends at top, connects downward
+    if connections.left and not (connections.up or connections.down or connections.right):
+        return PATH_SPRITES['right_end']  # Path ends at right, connects leftward
+    if connections.right and not (connections.up or connections.down or connections.left):
+        return PATH_SPRITES['left_end']  # Path ends at left, connects rightward
+    
+    # If connected only vertically (up/down), use vertical sprite
+    if (connections.up or connections.down) and not (connections.left or connections.right):
+        return PATH_SPRITES['vertical']
+    
+    # Otherwise use horizontal sprite (default)
+    return PATH_SPRITES['horizontal']
+
 setup_map()
 setup_battle()
 
@@ -149,14 +223,21 @@ for x in range(world_size[0]):
             esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
             esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
             esper.add_component(grass, Terrain('grass'))
-            if name == 'hill' or name == 'town':
+            if name == 'hill' or name == 'town' or name == 'path':
                 z = 1
             else:
                 z = 3
 
         if name != 'grass':
             terrain = esper.create_entity()
-            esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+            # Special handling for path tiles
+            if name == 'path':
+                connections = get_path_connections(x, y, world_map)
+                path_sprite = get_path_sprite(connections)
+                esper.add_component(terrain, Renderable(path_sprite, z))
+                esper.add_component(terrain, connections)
+            else:
+                esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
             esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
             esper.add_component(terrain, Terrain(name))
 
