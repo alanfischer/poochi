@@ -1,5 +1,6 @@
 import esper
 import random
+import pygame
 from components import *
 
 
@@ -16,5 +17,11 @@ class EncounterSystem(esper.Processor):
                 self.start_encounter()
 
     def start_encounter(self):
+        pygame.mixer.music.pause()
         esper.switch_world('battle')
         self.in_encounter = True
+
+    def end_encounter(self):
+        pygame.mixer.music.unpause()
+        esper.switch_world('map')
+        self.in_encounter = False

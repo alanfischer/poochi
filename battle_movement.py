@@ -2,6 +2,7 @@ import pygame
 import esper
 import time
 from components import *
+from encounter import EncounterSystem
 
 
 class BattleMovementSystem(esper.Processor):
@@ -32,10 +33,15 @@ class BattleMovementSystem(esper.Processor):
                 player.direction = 'right'
                 self.animate(player)
 
-            # Jumping
             if keys[pygame.K_SPACE] and moveable.on_ground:
                 moveable.velocity_y = -self.jump_strength
                 moveable.on_ground = False
+            
+            if keys[pygame.K_ESCAPE]:
+                for processor in esper._processors:
+                    if isinstance(processor, EncounterSystem):
+                        processor.end_encounter()
+                        break
 
             # Apply Gravity
             moveable.velocity_y += self.gravity * dt

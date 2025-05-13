@@ -19,8 +19,8 @@ class Position:
 
 
 class Moveable:
-    def __init__(self):
-        self.speed = 2
+    def __init__(self, speed):
+        self.speed = speed
         self.target_x = None
         self.target_y = None
         self.moved = False

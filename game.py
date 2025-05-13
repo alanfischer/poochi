@@ -25,9 +25,9 @@ PLAYER_FILE = 'harry.png'
 COLORS = {
     'grass': (0, 249, 0, 255),
     'water': (4, 51, 255, 255),
-    'mountain': (192, 192, 192, 255),
+    'hill': (219, 116, 114, 255),
     'forest': (0, 143, 0, 255),
-    'hill': (146, 144, 0, 255),
+    'mountain': (146, 144, 0, 255),
     'town': (148, 82, 0, 255),
     'start': (182, 234, 255, 255)
 }
@@ -70,10 +70,16 @@ for x in range(world_size[0]):
     if start_pos:
         break
 
+# Music
+pygame.mixer.music.load('BeepBox-Song.mp3')
+pygame.mixer.music.play(-1)
+
 # Create Game Window
 screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
 pygame.display.set_caption('Adventures of Poochi')
 scene_surface = pygame.Surface((320, 240), pygame.SRCALPHA)
+
+encounter_system = EncounterSystem(0.1)
 
 def setup_map():
     esper.switch_world("map")
@@ -81,12 +87,11 @@ def setup_map():
     player_entity = esper.create_entity()
     esper.add_component(player_entity, Player(player_images))
     esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-    esper.add_component(player_entity, Moveable())
+    esper.add_component(player_entity, Moveable(1))
     esper.add_component(player_entity, Position(*start_pos))
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
-    encounter_system = EncounterSystem(0)#.5)
     movement_system = MovementSystem(camera_system, TILE_SIZE)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
@@ -103,7 +108,7 @@ def setup_battle():
     player_entity = esper.create_entity()
     esper.add_component(player_entity, Player(player_images))
     esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-    esper.add_component(player_entity, Moveable())
+    esper.add_component(player_entity, Moveable(2))
     esper.add_component(player_entity, Position(0,0))
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
@@ -112,6 +117,7 @@ def setup_battle():
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
     esper.add_processor(movement_system)
+    esper.add_processor(encounter_system)
 
 
 def get_tile_from_name(name):
