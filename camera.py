@@ -3,13 +3,13 @@ import esper
 
 
 class CameraSystem(esper.Processor):
-    def __init__(self, follow_target, width, height, zoom=1.0, inner_rect_factor=0.5):
+    def __init__(self, follow_target, width, height, start_offset=(0,0), zoom=1.0, inner_rect_factor=0.5):
         self.follow_target = follow_target
         self.width, self.height = width, height
         self.zoom = zoom
         # Initialize the camera's offset to center on the follow_target
-        self.offset_x = -self.follow_target.x * self.zoom + self.width // 2
-        self.offset_y = -self.follow_target.y * self.zoom + self.height // 2
+        self.offset_x = -self.follow_target.x * self.zoom + self.width // 2 + start_offset[0]
+        self.offset_y = -self.follow_target.y * self.zoom + self.height // 2 + start_offset[1]
         # Define the inner rectangle
         self.inner_rect_width = self.width * inner_rect_factor
         self.inner_rect_height = self.height * inner_rect_factor

@@ -4,6 +4,7 @@ class Player:
         self.direction = 'left'
         self.frame = 0
         self.last_frame_time = 0
+        self.firing_start_time = None
 
 
 class Terrain:
@@ -40,3 +41,10 @@ class PathConnections:
         self.down = False
         self.left = False
         self.right = False
+
+
+class Projectile:
+    def __init__(self, direction, speed, created_at):
+        self.direction = direction
+        self.speed = speed
+        self.created_at = created_at

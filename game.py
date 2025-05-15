@@ -1,3 +1,5 @@
+import os
+os.environ['SDL_VIDEO_VSYNC'] = '1'
 import esper
 import pygame
 import random
@@ -24,6 +26,7 @@ TILES = {
     'ledge': ['forest_ledge.png']
 }
 PLAYER_FILE = 'harry.png'
+BATTLE_PLAYER_FILE = 'harry_battle.png'
 
 BACKGROUND_FILE = 'grass_background.png'
 
@@ -62,6 +65,7 @@ PATH_SPRITES = {
 
 # Initialize Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Load World Map
 world_map = pygame.image.load(MAP_FILE)
@@ -87,6 +91,27 @@ player_images['down'][1].blit(player_sheet, (0, 0), (8, 0, 8, 16))
 player_images['left'][0] = pygame.transform.flip(player_images['right'][0], True, False)
 player_images['left'][1] = pygame.transform.flip(player_images['right'][1], True, False)
 
+# Load Player Battle
+battle_player_sheet = pygame.image.load(BATTLE_PLAYER_FILE)
+battle_player_images = {
+    'left': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'right': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'jump_left': [pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'jump_right': [pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'fire_left': [pygame.Surface((21, 32), pygame.SRCALPHA)],
+    'fire_right': [pygame.Surface((21, 32), pygame.SRCALPHA)],
+}
+
+# Extract each image
+battle_player_images['right'][0].blit(battle_player_sheet, (0, 0), (0, 0, 15, 32))
+battle_player_images['right'][1].blit(battle_player_sheet, (0, 0), (16, 0, 15, 32))
+battle_player_images['left'][0] = pygame.transform.flip(battle_player_images['right'][0], True, False)
+battle_player_images['left'][1] = pygame.transform.flip(battle_player_images['right'][1], True, False)
+battle_player_images['jump_right'][0].blit(battle_player_sheet, (0, 0), (53, 0, 15, 32))
+battle_player_images['jump_left'][0] = pygame.transform.flip(battle_player_images['jump_right'][0], True, False)
+battle_player_images['fire_right'][0].blit(battle_player_sheet, (0, 0), (32, 0, 21, 32))
+battle_player_images['fire_left'][0] = pygame.transform.flip(battle_player_images['fire_right'][0], True, False)
+
 start_pos = None
 for x in range(world_size[0]):
     for y in range(world_size[1]):
@@ -101,10 +126,12 @@ pygame.mixer.music.load('BeepBox-Song.mp3')
 pygame.mixer.music.play(-1)
 
 # Create Game Window
-screen = pygame.display.set_mode((1600, 1000), pygame.RESIZABLE)
+screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.SCALED, vsync=1)
 pygame.display.set_caption('Adventures of Poochi')
 scene_surface = pygame.Surface((320, 240), pygame.SRCALPHA)
 
+# Enable vsync
+pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.KEYUP, pygame.VIDEORESIZE])
 
 def get_tile_from_name(name):
     return random.choice(tiles.get(name, [None]))
@@ -172,8 +199,6 @@ def get_path_sprite(connections):
     return PATH_SPRITES['horizontal']
 
 
-encounter_system = EncounterSystem(0.1)
-
 def setup_map():
     esper.switch_world("map")
 
@@ -186,6 +211,8 @@ def setup_map():
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
     movement_system = MovementSystem(camera_system, TILE_SIZE)
+    encounter_system = EncounterSystem(0.1)
+    encounter_system.set_battle_params(scene_surface, TILE_SIZE, battle_player_images)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
     esper.add_processor(movement_system)
@@ -223,47 +250,7 @@ def setup_map():
                 esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
                 esper.add_component(terrain, Terrain(name))
 
-
-def setup_battle(name):
-    esper.switch_world("battle_" + name)
-
-    background = pygame.image.load(name + "_background.png")
-    background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
-
-    player_entity = esper.create_entity()
-    esper.add_component(player_entity, Player(player_images))
-    esper.add_component(player_entity, Renderable(player_images['left'][0], 2))
-    esper.add_component(player_entity, Moveable(2))
-    esper.add_component(player_entity, Position(0,0))
-
-    camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height(), inner_rect_factor = 1.0)
-    render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
-    movement_system = BattleMovementSystem()
-    esper.add_processor(camera_system)
-    esper.add_processor(render_system)
-    esper.add_processor(movement_system)
-    esper.add_processor(encounter_system)
-
-    battle_map = pygame.image.load(name + "_map.png")
-    battle_size = battle_map.get_size()
-
-    for x in range(battle_size[0]):
-        for y in range(battle_size[1]):
-            grass = esper.create_entity()
-
-            color = battle_map.get_at((x, y))
-            name = get_tile_name_from_color(color)
-
-            z = 0
-
-            if name == 'ledge':
-                terrain = esper.create_entity()
-                esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
-                esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
-
 setup_map()
-
-setup_battle("grass")
 
 esper.switch_world("map")
 
@@ -280,13 +267,15 @@ def game_loop():
                 running = False
             elif event.type == pygame.VIDEORESIZE:
                 # Update the screen surface to the new size
-                screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE | pygame.HWSURFACE | pygame.DOUBLEBUF, vsync=1)
+                pass # With pygame.SCALED, we don't need to reset the mode here.
 
         # Update ECS world
         esper.process(dt)
 
-        scaled_surface = pygame.transform.scale(scene_surface, (screen.get_width(), screen.get_height()))
-        screen.blit(scaled_surface, (0, 0))
+        # scaled_surface = pygame.transform.scale(scene_surface, (screen.get_width(), screen.get_height()))
+        # screen.blit(scaled_surface, (0, 0))
+        screen.blit(scene_surface, (0,0)) # Blit the 320x240 scene_surface to the 320x240 logical screen
     
         # Flip display
         pygame.display.flip()
