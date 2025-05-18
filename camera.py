@@ -3,13 +3,19 @@ import esper
 
 
 class CameraSystem(esper.Processor):
-    def __init__(self, follow_target, width, height, start_offset=(0,0), zoom=1.0, inner_rect_factor=0.5):
+    def __init__(self, follow_target, width, height, start_offset=(0,0), zoom=1.0, inner_rect_factor=0.5, live_follow=True):
         self.follow_target = follow_target
         self.width, self.height = width, height
         self.zoom = zoom
-        # Initialize the camera's offset to center on the follow_target
-        self.offset_x = -self.follow_target.x * self.zoom + self.width // 2 + start_offset[0]
-        self.offset_y = -self.follow_target.y * self.zoom + self.height // 2 + start_offset[1]
+
+        if self.follow_target:
+            # Initialize the camera's offset to center on the follow_target
+            self.offset_x = -self.follow_target.x * self.zoom + self.width // 2 + start_offset[0]
+            self.offset_y = -self.follow_target.y * self.zoom + self.height // 2 + start_offset[1]
+        else:
+            self.offset_x = start_offset[0]
+            self.offset_y = start_offset[1]
+
         # Define the inner rectangle
         self.inner_rect_width = self.width * inner_rect_factor
         self.inner_rect_height = self.height * inner_rect_factor
@@ -19,6 +25,7 @@ class CameraSystem(esper.Processor):
         self.slide_start_time = 0
         self.target_offset_x = self.offset_x
         self.target_offset_y = self.offset_y
+        self.live_follow = live_follow
 
     def start_slide(self, dx, dy):
         self.sliding = True
@@ -46,7 +53,7 @@ class CameraSystem(esper.Processor):
                 self.sliding = False
             return
 
-        if self.follow_target:
+        if self.follow_target and self.live_follow:
             # Calculate the screen position where the player should appear
             target_x_on_screen = -self.follow_target.x * self.zoom + self.width // 2
             target_y_on_screen = -self.follow_target.y * self.zoom + self.height // 2

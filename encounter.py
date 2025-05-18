@@ -31,15 +31,15 @@ class EncounterSystem(esper.Processor):
                 moveable.moved = False
                 if random.random() < self.encounter_chance:
                     # Create the battle scene before switching worlds
-                    create_battle("grass", self, self.scene_surface, self.TILE_SIZE, self.battle_player_images)
-                    esper.switch_world('battle_grass')
+                    create_battle("background", self, self.scene_surface, self.TILE_SIZE, self.battle_player_images)
+                    esper.switch_world('battle_background')
 
     def handle_world_change(self, new_world):
         if new_world.startswith("battle_"):
             pygame.mixer.music.pause()
             self.in_encounter = True
         elif new_world == "map":
-            esper.delete_world("battle_grass")
+            esper.delete_world("battle_background")
             pygame.mixer.music.unpause()
             self.in_encounter = False
 

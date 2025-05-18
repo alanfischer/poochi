@@ -49,8 +49,7 @@ class MovementSystem(esper.Processor):
 
                 collision = False
                 if (terrain := terrain_at(target_x, target_y)) is not None:
-                    collision = (terrain.type ==
-                                 'mountain' or terrain.type == 'water')
+                    collision = (terrain.type == 'mountain' or terrain.type == 'water' or terrain.type == 'pillar')
 
                 if collision == False:
                     moveable.target_x = target_x
@@ -64,6 +63,8 @@ class MovementSystem(esper.Processor):
                 elif terrain.type == 'hill':
                     move_speed = move_speed * 0.5
                     on_hill = True
+                elif terrain.type == 'track':
+                    move_speed = move_speed * 0.6
 
             # Smooth movement towards the target position
             if (position.x, position.y) != (moveable.target_x, moveable.target_y):

@@ -21,14 +21,17 @@ TILES = {
     'town': ['town.png'],
     'forest': ['tree.png'],
     'hill': ['hill_1.png', 'hill_2.png'],
-
+    'hut': ['hut.png'],
+    'flute': ['flute.png'],
+    'pillar': ['pillar.png'],
+    'hogwarts_castle': ['hogwart_castle.png'],
     # Battle
     'ledge': ['forest_ledge.png']
 }
 PLAYER_FILE = 'harry.png'
 BATTLE_PLAYER_FILE = 'harry_battle.png'
 
-BACKGROUND_FILE = 'grass_background.png'
+BACKGROUND_FILE = 'background.png'
 
 COLORS = {
     # World
@@ -40,7 +43,11 @@ COLORS = {
     'town': (0, 82, 0, 255),
     'path': (148, 82, 0, 255),
     'start': (182, 234, 255, 255),
-
+    'track': (198, 203, 135, 255),
+    'hut': (100, 100, 100, 255),
+    'flute': (0, 0, 200, 255),
+    'pillar': (165, 165, 165, 255),
+    'hogwarts_castle': (255, 0, 0, 255),
     # Battle
     'ledge': (133, 108, 68, 255)
 }
@@ -61,6 +68,22 @@ PATH_SPRITES = {
     'bottom_end': pygame.image.load('bottom_path_end.png'),
     'left_end': pygame.image.load('left_path_end.png'),
     'right_end': pygame.image.load('right_path_end.png')
+}
+
+TRACK_SPRITES = {
+    'horizontal': pygame.image.load('track_horizontal.png'),
+    'vertical': pygame.image.load('track_vertical.png'),
+    #'split_up': pygame.image.load('track_3_split_up.png'),
+    #'split_left': pygame.image.load('track_3_split_left.png'),
+    #'split_right': pygame.image.load('track_3_split_right.png'),
+    'left_to_bottom': pygame.image.load('left_to_bottom_track.png'),
+    'bottom_to_right': pygame.image.load('bottom_to_right_track.png'),
+    'right_to_top': pygame.image.load('right_to_top_track.png'),
+    'top_to_left': pygame.image.load('top_to_left_track.png'),
+    #'top_end': pygame.image.load('track_top_end.png'),
+    #'bottom_end': pygame.image.load('track_bottom_end.png'),
+    #'left_end': pygame.image.load('track_left_end.png'),
+    #'right_end': pygame.image.load('track_right_end.png')
 }
 
 # Initialize Pygame
@@ -198,6 +221,56 @@ def get_path_sprite(connections):
     # Otherwise use horizontal sprite (default)
     return PATH_SPRITES['horizontal']
 
+def get_track_connections(x, y, world_map):
+    connections = TrackConnections()
+    track_color = COLORS['track']
+    # Check adjacent tiles
+    if y > 0 and world_map.get_at((x, y - 1)) == track_color:
+        connections.up = True
+    if y < world_map.get_height() - 1 and world_map.get_at((x, y + 1)) == track_color:
+        connections.down = True
+    if x > 0 and world_map.get_at((x - 1, y)) == track_color:
+        connections.left = True
+    if x < world_map.get_width() - 1 and world_map.get_at((x + 1, y)) == track_color:
+        connections.right = True
+
+    return connections
+
+def get_track_sprite(connections):
+    # Check for 3-way splits first
+    #if connections.left and connections.right:
+        #if connections.up and not connections.down:
+            #return TRACK_SPRITES['split_up']
+        #elif connections.down and not connections.up:
+            #return TRACK_SPRITES['split_down']
+    # if connections.up and connections.down:
+        # if connections.left and not connections.right:
+            # return TRACK_SPRITES['split_left']
+        # elif connections.right and not connections.left:
+            # return TRACK_SPRITES['split_right']
+    # Check for curved tracks (corners)
+    if connections.left and connections.down and not connections.right and not connections.up:
+        return TRACK_SPRITES['left_to_bottom']
+    if connections.down and connections.right and not connections.left and not connections.up:
+        return TRACK_SPRITES['bottom_to_right']
+    if connections.right and connections.up and not connections.left and not connections.down:
+        return TRACK_SPRITES['right_to_top']
+    if connections.up and connections.left and not connections.right and not connections.down:
+        return TRACK_SPRITES['top_to_left']
+    # Check for track ends (only one connection)
+    #if connections.up and not (connections.down or connections.left or connections.right):
+        #return TRACK_SPRITES['bottom_end']
+    #if connections.down and not (connections.up or connections.left or connections.right):
+        #return TRACK_SPRITES['top_end']
+    #if connections.left and not (connections.up or connections.down or connections.right):
+        #return TRACK_SPRITES['right_end']
+    #if connections.right and not (connections.up or connections.down or connections.left):
+        #return TRACK_SPRITES['left_end']
+    # If connected only vertically (up/down), use vertical sprite
+    if (connections.up or connections.down) and not (connections.left or connections.right):
+        return TRACK_SPRITES['vertical']
+    # Otherwise use horizontal sprite (default)
+    return TRACK_SPRITES['horizontal']
 
 def setup_map():
     esper.switch_world("map")
@@ -220,22 +293,22 @@ def setup_map():
 
     for x in range(world_size[0]):
         for y in range(world_size[1]):
+            # Always create grass first
             grass = esper.create_entity()
+            esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
+            esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
+            esper.add_component(grass, Terrain('grass'))
 
             color = world_map.get_at((x, y))
             name = get_tile_name_from_color(color)
 
             z = 0
-            # Add grass if necessary
-            if name == 'grass' or name == 'mountain' or name == 'town' or name == 'forest' or name == 'hill' or get_tile_from_name(name) == None:
-                grass = esper.create_entity()
-                esper.add_component(grass, Renderable(get_tile_from_name('grass'), 0))
-                esper.add_component(grass, Position(x * TILE_SIZE, y * TILE_SIZE))
-                esper.add_component(grass, Terrain('grass'))
-                if name == 'hill' or name == 'town' or name == 'path':
-                    z = 1
-                else:
-                    z = 3
+            if name == 'grass':
+                z = 0
+            elif name == 'hogwarts_castle' or name == 'hill' or name == 'town' or name == 'path' or name == 'track' or name == 'hut' or name == 'flute':
+                z = 1
+            else:
+                z = 3
 
             if name != 'grass':
                 terrain = esper.create_entity()
@@ -244,6 +317,11 @@ def setup_map():
                     connections = get_path_connections(x, y, world_map)
                     path_sprite = get_path_sprite(connections)
                     esper.add_component(terrain, Renderable(path_sprite, z))
+                    esper.add_component(terrain, connections)
+                elif name == 'track':
+                    connections = get_track_connections(x, y, world_map)
+                    track_sprite = get_track_sprite(connections)
+                    esper.add_component(terrain, Renderable(track_sprite, z))
                     esper.add_component(terrain, connections)
                 else:
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))

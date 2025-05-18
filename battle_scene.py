@@ -53,8 +53,8 @@ def create_battle(name, encounter_system, scene_surface, TILE_SIZE, battle_playe
     total_map_height = battle_size[1] * TILE_SIZE
     
     # Calculate offsets to center the battle map
-    offset_x = -(scene_surface.get_width() - total_map_width) // 2
-    offset_y = -(scene_surface.get_height() - total_map_height) // 2
+    offset_x = TILE_SIZE // 2 - total_map_width // 2
+    offset_y = TILE_SIZE // 2 - total_map_height // 2
 
     movement_system = BattleMovementSystem(jump_strength=200)
 
@@ -68,7 +68,8 @@ def create_battle(name, encounter_system, scene_surface, TILE_SIZE, battle_playe
                                  scene_surface.get_width(),
                                  scene_surface.get_height(),
                                  start_offset=(0, 16*5),
-                                 inner_rect_factor = 1.0)
+                                 inner_rect_factor = 1.0,
+                                 live_follow=False)
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)

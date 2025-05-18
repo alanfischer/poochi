@@ -43,6 +43,14 @@ class PathConnections:
         self.right = False
 
 
+class TrackConnections:
+    def __init__(self):
+        self.up = False
+        self.down = False
+        self.left = False
+        self.right = False
+
+
 class Projectile:
     def __init__(self, direction, speed, created_at):
         self.direction = direction
