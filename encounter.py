@@ -12,6 +12,7 @@ class EncounterSystem(esper.Processor):
         self.scene_surface = None
         self.TILE_SIZE = None
         self.battle_player_images = None
+        self.music_pos = 0  # Added to store current music position
 
     def set_battle_params(self, scene_surface, TILE_SIZE, battle_player_images):
         self.scene_surface = scene_surface
@@ -36,10 +37,19 @@ class EncounterSystem(esper.Processor):
 
     def handle_world_change(self, new_world):
         if new_world.startswith("battle_"):
+            # Store current music position and pause
+            self.music_pos = pygame.mixer.music.get_pos()
             pygame.mixer.music.pause()
+            # Play battle music
+            pygame.mixer.music.load('battle.mp3')
+            pygame.mixer.music.play(-1)  # -1 means loop indefinitely
             self.in_encounter = True
         elif new_world == "map":
+            # Stop battle music
+            pygame.mixer.music.stop()
+            # Resume main music from where it left off
+            pygame.mixer.music.load('main.mp3')
+            pygame.mixer.music.play(-1, start=self.music_pos / 1000.0)  # Convert ms to seconds
             esper.delete_world("battle_background")
-            pygame.mixer.music.unpause()
             self.in_encounter = False
 

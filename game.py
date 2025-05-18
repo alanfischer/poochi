@@ -145,7 +145,7 @@ for x in range(world_size[0]):
         break
 
 # Music
-pygame.mixer.music.load('BeepBox-Song.mp3')
+pygame.mixer.music.load('main.mp3')
 pygame.mixer.music.play(-1)
 
 # Create Game Window
