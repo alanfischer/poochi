@@ -11,8 +11,8 @@ class EncounterSystem(esper.Processor):
         self.current_world = "map"  # Track current world
         self.scene_surface = None
         self.TILE_SIZE = None
-        self.battle_player_images = None
         self.music_pos = 0  # Added to store current music position
+        self.battle_player_images = None
 
     def set_battle_params(self, scene_surface, TILE_SIZE, battle_player_images):
         self.scene_surface = scene_surface
@@ -31,9 +31,11 @@ class EncounterSystem(esper.Processor):
             if moveable and moveable.moved:
                 moveable.moved = False
                 if random.random() < self.encounter_chance:
+                    # Randomly choose between battle 1 and 2
+                    battle_number = random.randint(1, 2)
                     # Create the battle scene before switching worlds
-                    create_battle("background", self, self.scene_surface, self.TILE_SIZE, self.battle_player_images)
-                    esper.switch_world('battle_background')
+                    create_battle(battle_number, self, self.scene_surface, self.TILE_SIZE, self.battle_player_images)
+                    esper.switch_world(f'battle_{battle_number}')
 
     def handle_world_change(self, new_world):
         if new_world.startswith("battle_"):
@@ -50,6 +52,8 @@ class EncounterSystem(esper.Processor):
             # Resume main music from where it left off
             pygame.mixer.music.load('main.mp3')
             pygame.mixer.music.play(-1, start=self.music_pos / 1000.0)  # Convert ms to seconds
-            esper.delete_world("battle_background")
+            # Delete the current battle world
+            if self.current_world.startswith("battle_"):
+                esper.delete_world(self.current_world)
             self.in_encounter = False
 

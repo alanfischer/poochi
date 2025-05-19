@@ -56,3 +56,19 @@ class Projectile:
         self.direction = direction
         self.speed = speed
         self.created_at = created_at
+
+
+class Enemy:
+    def __init__(self, images):
+        self.images = images
+        self.direction = 'right'
+        self.frame = 0
+        self.last_frame_time = 0
+
+
+class EnemyAI:
+    def __init__(self):
+        self.move_direction = 1  # 1 for right, -1 for left
+        self.move_speed = 60  # pixels per second
+        self.right_boundary = 100  # Same as player's right boundary
+        self.left_boundary = 10  # Middle of screen
