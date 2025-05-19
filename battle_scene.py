@@ -6,16 +6,14 @@ from camera import *
 from render import *
 from battle_movement import *
 
-# Game Constants
+# Battle Tiles
 TILES = {
-    # Battle
     'ledge': ['battle_grass.png'],
     'grass': ['battle_grass.png'],
     'grass_light': ['battle_grass.png']
 }
 
 COLORS = {
-    # Battle
     'ledge': (184, 19, 29, 255),
     'grass': (184, 19, 29, 255),
     'grass_light': (184, 19, 29, 255)
@@ -23,6 +21,49 @@ COLORS = {
 
 # Load battle tiles
 tiles = {color: [pygame.image.load(file) for file in files] for color, files in TILES.items()}
+
+# Battle sprites
+battle_player_sheet = pygame.image.load('harry_battle.png')
+battle_player_images = {
+    'left': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'right': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'jump_left': [pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'jump_right': [pygame.Surface((15, 32), pygame.SRCALPHA)],
+    'fire_left': [pygame.Surface((21, 32), pygame.SRCALPHA)],
+    'fire_right': [pygame.Surface((21, 32), pygame.SRCALPHA)],
+}
+
+peeves_sheet = pygame.image.load('peeves.png')
+peeves_images = {
+    'left': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+    'right': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+}
+
+norris_sheet = pygame.image.load('norris.png')
+norris_images = {
+    'left': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+    'right': [pygame.Surface((16, 16), pygame.SRCALPHA), pygame.Surface((16, 16), pygame.SRCALPHA)],
+}
+
+# Extract each image
+battle_player_images['right'][0].blit(battle_player_sheet, (0, 0), (0, 0, 15, 32))
+battle_player_images['right'][1].blit(battle_player_sheet, (0, 0), (16, 0, 15, 32))
+battle_player_images['left'][0] = pygame.transform.flip(battle_player_images['right'][0], True, False)
+battle_player_images['left'][1] = pygame.transform.flip(battle_player_images['right'][1], True, False)
+battle_player_images['jump_right'][0].blit(battle_player_sheet, (0, 0), (53, 0, 15, 32))
+battle_player_images['jump_left'][0] = pygame.transform.flip(battle_player_images['jump_right'][0], True, False)
+battle_player_images['fire_right'][0].blit(battle_player_sheet, (0, 0), (32, 0, 21, 32))
+battle_player_images['fire_left'][0] = pygame.transform.flip(battle_player_images['fire_right'][0], True, False)
+
+peeves_images['right'][0].blit(peeves_sheet, (0, 0), (0, 0, 16, 16))
+peeves_images['right'][1].blit(peeves_sheet, (0, 0), (16, 0, 16, 16))
+peeves_images['left'][0] = pygame.transform.flip(peeves_images['right'][0], True, False)
+peeves_images['left'][1] = pygame.transform.flip(peeves_images['right'][1], True, False)
+
+norris_images['left'][0].blit(norris_sheet, (0, 0), (0, 0, 16, 16))
+norris_images['left'][1].blit(norris_sheet, (0, 0), (16, 0, 16, 16))
+norris_images['right'][0] = pygame.transform.flip(norris_images['left'][0], True, False)
+norris_images['right'][1] = pygame.transform.flip(norris_images['left'][1], True, False)
 
 def get_tile_from_name(name):
     return random.choice(tiles.get(name, [None]))
