@@ -95,7 +95,7 @@ def get_tile_name_from_color(color):
 
 # ===== Main Battle Creation =====
 
-def create_battle(number, encounter_system, scene_surface, TILE_SIZE, battle_player_images):
+def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
     battle_world_name = f"battle_{number}"
     try:
         esper.delete_world(battle_world_name)  # Attempt to delete if it exists

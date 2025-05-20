@@ -51,13 +51,6 @@ class TrackConnections:
         self.right = False
 
 
-class Projectile:
-    def __init__(self, direction, speed, created_at):
-        self.direction = direction
-        self.speed = speed
-        self.created_at = created_at
-
-
 class Enemy:
     def __init__(self, images):
         self.images = images

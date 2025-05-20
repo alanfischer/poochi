@@ -109,27 +109,6 @@ player_images['down'][1].blit(player_sheet, (0, 0), (8, 0, 8, 16))
 player_images['left'][0] = pygame.transform.flip(player_images['right'][0], True, False)
 player_images['left'][1] = pygame.transform.flip(player_images['right'][1], True, False)
 
-# Load Player Battle
-battle_player_sheet = pygame.image.load(BATTLE_PLAYER_FILE)
-battle_player_images = {
-    'left': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
-    'right': [pygame.Surface((15, 32), pygame.SRCALPHA), pygame.Surface((15, 32), pygame.SRCALPHA)],
-    'jump_left': [pygame.Surface((15, 32), pygame.SRCALPHA)],
-    'jump_right': [pygame.Surface((15, 32), pygame.SRCALPHA)],
-    'fire_left': [pygame.Surface((21, 32), pygame.SRCALPHA)],
-    'fire_right': [pygame.Surface((21, 32), pygame.SRCALPHA)],
-}
-
-# Extract each image
-battle_player_images['right'][0].blit(battle_player_sheet, (0, 0), (0, 0, 15, 32))
-battle_player_images['right'][1].blit(battle_player_sheet, (0, 0), (16, 0, 15, 32))
-battle_player_images['left'][0] = pygame.transform.flip(battle_player_images['right'][0], True, False)
-battle_player_images['left'][1] = pygame.transform.flip(battle_player_images['right'][1], True, False)
-battle_player_images['jump_right'][0].blit(battle_player_sheet, (0, 0), (53, 0, 15, 32))
-battle_player_images['jump_left'][0] = pygame.transform.flip(battle_player_images['jump_right'][0], True, False)
-battle_player_images['fire_right'][0].blit(battle_player_sheet, (0, 0), (32, 0, 21, 32))
-battle_player_images['fire_left'][0] = pygame.transform.flip(battle_player_images['fire_right'][0], True, False)
-
 start_pos = None
 for x in range(world_size[0]):
     for y in range(world_size[1]):
@@ -279,9 +258,8 @@ def setup_map():
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
     cutscene_system = CutsceneSystem(scene_surface)
-    movement_system = MovementSystem(camera_system, TILE_SIZE, cutscene_system)
-    encounter_system = EncounterSystem(0.1)
-    encounter_system.set_battle_params(scene_surface, TILE_SIZE, battle_player_images)
+    movement_system = MovementSystem(camera_system, cutscene_system, TILE_SIZE)
+    encounter_system = EncounterSystem(scene_surface, cutscene_system, TILE_SIZE, 0.1)
 
     esper.add_processor(camera_system)
     esper.add_processor(render_system)

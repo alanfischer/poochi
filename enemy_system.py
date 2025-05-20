@@ -1,6 +1,23 @@
 import esper
 import pygame
 from components import *
+from battle_system import Projectile
+
+class Enemy:
+    def __init__(self, images):
+        self.images = images
+        self.direction = 'right'
+        self.frame = 0
+        self.last_frame_time = 0
+
+
+class EnemyAI:
+    def __init__(self):
+        self.move_direction = 1  # 1 for right, -1 for left
+        self.move_speed = 60  # pixels per second
+        self.right_boundary = 100  # Same as player's right boundary
+        self.left_boundary = 10  # Middle of screen
+
 
 class EnemySystem(esper.Processor):
     def __init__(self):
@@ -60,7 +77,7 @@ class EnemySystem(esper.Processor):
                     enemy_bbox.width,
                     enemy_bbox.height
                 )
-
+                
                 # Check collision
                 if proj_rect.colliderect(enemy_rect):
                     # Remove both the enemy and the projectile
