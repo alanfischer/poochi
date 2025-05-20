@@ -1,7 +1,7 @@
 import esper
 import pygame
 from components import *
-
+from cutscene_system import *
 
 def terrain_at(x, y):
     result = None
@@ -12,10 +12,11 @@ def terrain_at(x, y):
 
 
 class MovementSystem(esper.Processor):
-    def __init__(self, camera, tile_size):
+    def __init__(self, camera, tile_size, cutscene_system):
         super().__init__()
         self.camera = camera
         self.tile_size = tile_size
+        self.cutscene_system = cutscene_system
         self.move_map = {
             pygame.K_LEFT: ((-tile_size, 0), 'left'),
             pygame.K_RIGHT: ((tile_size, 0), 'right'),
@@ -50,6 +51,12 @@ class MovementSystem(esper.Processor):
                 collision = False
                 if (terrain := terrain_at(target_x, target_y)) is not None:
                     collision = (terrain.type == 'mountain' or terrain.type == 'water' or terrain.type == 'pillar')
+                    
+                    # Check for cutscene trigger
+                    for entity, (cutscene, pos) in esper.get_components(Cutscene, Position):
+                        if pos.x == target_x and pos.y == target_y:
+                            self.cutscene_system.start_cutscene(cutscene.image_path, cutscene.music_path)
+                            return
 
                 if collision == False:
                     moveable.target_x = target_x

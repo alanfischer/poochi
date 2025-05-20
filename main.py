@@ -278,13 +278,16 @@ def setup_map():
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
-    movement_system = MovementSystem(camera_system, TILE_SIZE)
+    cutscene_system = CutsceneSystem(scene_surface)
+    movement_system = MovementSystem(camera_system, TILE_SIZE, cutscene_system)
     encounter_system = EncounterSystem(0.1)
     encounter_system.set_battle_params(scene_surface, TILE_SIZE, battle_player_images)
+
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
     esper.add_processor(movement_system)
     esper.add_processor(encounter_system)
+    esper.add_processor(cutscene_system)
 
     for x in range(world_size[0]):
         for y in range(world_size[1]):
@@ -318,6 +321,9 @@ def setup_map():
                     track_sprite = get_track_sprite(connections)
                     esper.add_component(terrain, Renderable(track_sprite, z))
                     esper.add_component(terrain, connections)
+                elif name == 'hogwarts_castle':
+                    esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hogwarts.mp3', 'hogwarts_cutscene'))
+                    esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 else:
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 esper.add_component(terrain, Position(x * TILE_SIZE, y * TILE_SIZE))
