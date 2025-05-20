@@ -21,12 +21,9 @@ COLORS = {
     'grass_light': (184, 19, 29, 255)
 }
 
-# Enemy position scales (x, y) as fractions of map dimensions
-# x: 2/3 = right side of screen
-# y: -1/3 = upper third, 1/3 = lower third
-ENEMY_POSITION_SCALE = {
-    1: (2/3, -1/3),  # Peeves in upper right
-    2: (2/3, -0.03)    # Norris in middle right
+ENEMY_OFFSET = {
+    1: (160, -60),  # Peeves in upper right
+    2: (160, -8)    # Norris in middle right
 }
 
 # ===== Asset Loading =====
@@ -143,8 +140,8 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE, battle_pla
     esper.add_component(enemy_entity, Moveable(1))
 
     # Position enemy based on map dimensions
-    enemy_x = total_map_width * ENEMY_POSITION_SCALE[number][0]
-    enemy_y = total_map_height * ENEMY_POSITION_SCALE[number][1]
+    enemy_x = ENEMY_OFFSET[number][0]
+    enemy_y = ENEMY_OFFSET[number][1]
 
     esper.add_component(enemy_entity, Position(enemy_x, enemy_y))
     esper.add_component(enemy_entity, EnemyAI())  # New component for enemy behavior
