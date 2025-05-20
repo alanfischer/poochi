@@ -4,9 +4,8 @@ import random
 from components import *
 from camera import *
 from render import *
-from battle_movement import *
-
-# ===== Constants =====
+from battle_system import *
+from enemy_system import *
 
 # Battle map configuration
 TILES = {
@@ -123,15 +122,15 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE, battle_pla
     offset_x = TILE_SIZE // 2 - total_map_width // 2
     offset_y = TILE_SIZE // 2 - total_map_height // 2
 
-    # Create movement system
-    movement_system = BattleMovementSystem(jump_strength=200)
+    # Create battle system
+    battle_system = BattleSystem(jump_strength=200)
 
     # Create player
     player_entity = esper.create_entity()
     esper.add_component(player_entity, Player(battle_player_images))
     esper.add_component(player_entity, Renderable(battle_player_images['left'][0], 2))
     esper.add_component(player_entity, Moveable(2))
-    esper.add_component(player_entity, Position(0, movement_system.ground_y_position))
+    esper.add_component(player_entity, Position(0, battle_system.ground_y_position))
 
     # Create enemy
     enemy_entity = esper.create_entity()
@@ -156,9 +155,9 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE, battle_pla
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE, background)
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
-    esper.add_processor(movement_system)
+    esper.add_processor(battle_system)
     esper.add_processor(encounter_system)
-    esper.add_processor(EnemySystem())  # Add enemy system
+    esper.add_processor(EnemySystem())
 
     # Create terrain
     for x in range(battle_size[0]):

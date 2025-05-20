@@ -1,14 +1,13 @@
-import os
-os.environ['SDL_VIDEO_VSYNC'] = '1'
 import esper
 import pygame
 import random
+import asyncio
 from components import *
 from camera import *
 from render import *
 from encounter import *
 from movement import *
-from battle_movement import *
+from battle_system import *
 
 # Game Constants
 TILE_SIZE = 16
@@ -25,8 +24,6 @@ TILES = {
     'flute': ['flute.png'],
     'pillar': ['pillar.png'],
     'hogwarts_castle': ['hogwart_castle.png'],
-    # Battle
-    'ledge': ['forest_ledge.png']
 }
 PLAYER_FILE = 'harry.png'
 BATTLE_PLAYER_FILE = 'harry_battle.png'
@@ -48,8 +45,6 @@ COLORS = {
     'flute': (0, 0, 200, 255),
     'pillar': (165, 165, 165, 255),
     'hogwarts_castle': (255, 0, 0, 255),
-    # Battle
-    'ledge': (133, 108, 68, 255)
 }
 
 # Cache path sprites
@@ -334,7 +329,7 @@ esper.switch_world("map")
 
 clock = pygame.time.Clock()
 
-def game_loop():
+async def main():
     global screen
     running = True
     while running:
@@ -357,8 +352,8 @@ def game_loop():
     
         # Flip display
         pygame.display.flip()
+        await asyncio.sleep(0)
 
     pygame.quit()
 
-# Start the game
-game_loop()
+asyncio.run(main())
