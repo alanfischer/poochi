@@ -42,10 +42,10 @@ class EncounterSystem(esper.Processor):
                     battle_number = random.randint(1, 2)
                     # Create the battle scene before switching worlds
                     create_battle(battle_number, self, self.scene_surface, self.TILE_SIZE)
-                    esper.switch_world(f'battle_{battle_number}')
+                    esper.switch_world(f'battle')
 
     def handle_world_change(self, new_world):
-        if new_world.startswith("battle_"):
+        if new_world == "battle":
             # Store current music position and pause
             self.music_pos = pygame.mixer.music.get_pos()
             pygame.mixer.music.pause()
@@ -60,7 +60,7 @@ class EncounterSystem(esper.Processor):
             pygame.mixer.music.load('main.mp3')
             pygame.mixer.music.play(-1, start=self.music_pos / 1000.0)  # Convert ms to seconds
             # Delete the current battle world
-            if self.current_world.startswith("battle_"):
+            if self.current_world == "battle":
                 esper.delete_world(self.current_world)
             self.in_encounter = False
 
