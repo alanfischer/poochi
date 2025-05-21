@@ -304,7 +304,7 @@ def setup_map():
                     esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hagrid.mp3', 'hagrid_cutscene'))
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 elif name == 'flute':
-                    esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hagrid.mp3', 'flute_cutscene'))
+                    esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'flute.mp3', 'flute_cutscene'))
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 else:
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))

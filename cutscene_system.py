@@ -31,6 +31,15 @@ class CutsceneSystem(esper.Processor):
         if self.in_cutscene is not None:
             return
 
+        if cutscene.name == 'hogwarts_cutscene':
+            for entity, [player] in esper.get_components(Player):
+                if player.flute:
+                    from battle_scene import create_battle
+                    create_battle(3, self, self.scene_surface, 16)  # Using battle #3 for flute battle
+                    esper.switch_world('battle')
+                    return
+                break
+
         # Load cutscene image
         self.cutscene_image = pygame.image.load(cutscene.image_path)
         self.cutscene_image = pygame.transform.scale(self.cutscene_image, 
@@ -38,11 +47,14 @@ class CutsceneSystem(esper.Processor):
                                                     self.scene_surface.get_height()))
         self.in_cutscene = cutscene
 
+        esper.switch_world("cutscene")
+        esper.add_processor(self)
+
     def end_cutscene(self):
         if not self.in_cutscene:
             return
         
-        esper.switch_world("map") # Switch back to map world
+        esper.switch_world("map")
 
         if self.in_cutscene.name == 'flute_cutscene':
             # Find and delete the flute entity
@@ -51,8 +63,8 @@ class CutsceneSystem(esper.Processor):
                     esper.delete_entity(entity)
                     self.render_system.remove_entity(entity)
 
-                    for player_entity, [player_component] in esper.get_components(Player):
-                        player_component.flute = True
+                    for entity, [player] in esper.get_components(Player):
+                        player.flute = True
                         break # Assuming only one player
                     break
 

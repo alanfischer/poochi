@@ -18,10 +18,6 @@ class EncounterSystem(esper.Processor):
         # Set the music path in CutsceneSystem for MusicSystem to pick up
         self.cutscene_system.cutscene_music = cutscene.music_path
         
-        esper.switch_world("cutscene")
-        
-        esper.add_processor(self.cutscene_system)
-
         self.cutscene_system.start_cutscene(cutscene)
 
     def process(self, dt):
