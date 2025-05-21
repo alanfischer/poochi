@@ -46,11 +46,12 @@ class CutsceneSystem(esper.Processor):
 
         if self.in_cutscene.name == 'flute_cutscene':
             # Find and delete the flute entity
-            for entity, (terrain, _) in esper.get_components(Terrain, Position):
+            for entity, [terrain] in esper.get_components(Terrain):
                 if terrain.type == 'flute':
                     esper.delete_entity(entity)
-                    # Set player.flute to True
-                    for player_entity, player_component in esper.get_components(Player):
+                    self.render_system.remove_entity(entity)
+
+                    for player_entity, [player_component] in esper.get_components(Player):
                         player_component.flute = True
                         break # Assuming only one player
                     break
