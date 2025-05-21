@@ -21,14 +21,8 @@ class EncounterSystem(esper.Processor):
         
         esper.switch_world("cutscene")
         
-        # Ensure CutsceneSystem is active in the new world for input processing (e.g., space to skip)
-        # and for rendering the cutscene image.
-        # MusicSystem is global and will pick up the world change.
-        # EncounterSystem itself doesn't need to be in the cutscene world specifically for this flow,
-        # as its cleanup logic is based on world name changes observed in its process method.
         esper.add_processor(self.cutscene_system)
 
-        # Start cutscene visuals
         self.cutscene_system.start_cutscene(cutscene_data.image_path)
 
     def process(self, dt):
