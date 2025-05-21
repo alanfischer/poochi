@@ -8,6 +8,7 @@ from render import *
 from encounter import *
 from movement import *
 from battle_system import *
+from music_system import MusicSystem
 
 # Game Constants
 TILE_SIZE = 16
@@ -116,10 +117,6 @@ for x in range(world_size[0]):
             break
     if start_pos:
         break
-
-# Music
-pygame.mixer.music.load('main.mp3')
-pygame.mixer.music.play(-1)
 
 # Create Game Window
 screen = pygame.display.set_mode((320, 240), pygame.RESIZABLE | pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.SCALED, vsync=1)
@@ -257,14 +254,16 @@ def setup_map():
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
     cutscene_system = CutsceneSystem(scene_surface)
-    movement_system = MovementSystem(camera_system, cutscene_system, TILE_SIZE)
     encounter_system = EncounterSystem(scene_surface, cutscene_system, TILE_SIZE, 0.1)
+    movement_system = MovementSystem(camera_system, cutscene_system, TILE_SIZE, encounter_system)
+    music_system = MusicSystem(cutscene_system)
 
     esper.add_processor(camera_system)
     esper.add_processor(render_system)
     esper.add_processor(movement_system)
     esper.add_processor(encounter_system)
     esper.add_processor(cutscene_system)
+    esper.add_processor(music_system)
 
     for x in range(world_size[0]):
         for y in range(world_size[1]):
@@ -321,16 +320,10 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.VIDEORESIZE:
-                # Update the screen surface to the new size
-                # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE | pygame.HWSURFACE | pygame.DOUBLEBUF, vsync=1)
-                pass # With pygame.SCALED, we don't need to reset the mode here.
 
         # Update ECS world
         esper.process(dt)
 
-        # scaled_surface = pygame.transform.scale(scene_surface, (screen.get_width(), screen.get_height()))
-        # screen.blit(scaled_surface, (0, 0))
         screen.blit(scene_surface, (0,0)) # Blit the 320x240 scene_surface to the 320x240 logical screen
     
         # Flip display

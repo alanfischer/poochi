@@ -12,11 +12,12 @@ def terrain_at(x, y):
 
 
 class MovementSystem(esper.Processor):
-    def __init__(self, camera, cutscene_system, tile_size):
+    def __init__(self, camera, cutscene_system, tile_size, encounter_system):
         super().__init__()
         self.camera = camera
         self.tile_size = tile_size
         self.cutscene_system = cutscene_system
+        self.encounter_system = encounter_system
         self.move_map = {
             pygame.K_LEFT: ((-tile_size, 0), 'left'),
             pygame.K_RIGHT: ((tile_size, 0), 'right'),
@@ -41,20 +42,35 @@ class MovementSystem(esper.Processor):
 
             # If we are are not moving, find next step
             if moveable.target_x == position.x and moveable.target_y == position.y:
-                target_x, target_y = position.x, position.y
+                potential_target_x, potential_target_y = position.x, position.y
+                pressed_key = False
                 for key, ((dx, dy), direction) in self.move_map.items():
                     if keys[key]:
-                        target_x, target_y = target_x + dx, target_y + dy
+                        potential_target_x, potential_target_y = potential_target_x + dx, potential_target_y + dy
                         player.direction = direction
+                        pressed_key = True
                         break
+                
+                if pressed_key: # Only proceed if a movement key was pressed
+                    # Check for cutscene trigger at the potential target location
+                    for cutscene_entity, (cutscene_trigger, cutscene_pos) in esper.get_components(Cutscene, Position):
+                        if cutscene_pos.x == potential_target_x and cutscene_pos.y == potential_target_y:
+                            # Request EncounterSystem to start the cutscene
+                            self.encounter_system.start_world_cutscene(cutscene_trigger)
+                            moveable.moved = False # Prevent further processing like random encounters
+                            return # Player is blocked, cutscene starts
 
-                collision = False
-                if (terrain := terrain_at(target_x, target_y)) is not None:
-                    collision = (terrain.type == 'mountain' or terrain.type == 'water' or terrain.type == 'pillar')
+                    collision = False
+                    if (terrain := terrain_at(potential_target_x, potential_target_y)) is not None:
+                        collision = (terrain.type == 'mountain' or terrain.type == 'water' or terrain.type == 'pillar')
 
-                if collision == False:
-                    moveable.target_x = target_x
-                    moveable.target_y = target_y
+                    if not collision:
+                        moveable.target_x = potential_target_x
+                        moveable.target_y = potential_target_y
+                    else:
+                        moveable.moved = False # Player is blocked by collision
+                else:
+                    moveable.moved = False # No key pressed
 
             move_speed = moveable.speed
             on_hill = False
