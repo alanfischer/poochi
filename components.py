@@ -5,6 +5,7 @@ class Player:
         self.frame = 0
         self.last_frame_time = 0
         self.firing_start_time = None
+        self.flute = False
 
 
 class Terrain:

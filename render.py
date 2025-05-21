@@ -226,6 +226,9 @@ class RenderSystem(esper.Processor):
         for entity, (pos, renderable) in entities:
             self.quadtree.insert((entity, pos, renderable))
 
+    def remove_entity(self, entity):
+        self.quadtree.remove(entity)
+
     def update_entities(self, entities):
         for entity, (pos, renderable, _) in entities:
             self.quadtree.remove(entity)

@@ -53,10 +53,10 @@ class MovementSystem(esper.Processor):
                 
                 if pressed_key: # Only proceed if a movement key was pressed
                     # Check for cutscene trigger at the potential target location
-                    for cutscene_entity, (cutscene_trigger, cutscene_pos) in esper.get_components(Cutscene, Position):
+                    for cutscene_entity, (cutscene, cutscene_pos) in esper.get_components(Cutscene, Position):
                         if cutscene_pos.x == potential_target_x and cutscene_pos.y == potential_target_y:
                             # Request EncounterSystem to start the cutscene
-                            self.encounter_system.start_world_cutscene(cutscene_trigger)
+                            self.encounter_system.start_world_cutscene(cutscene)
                             moveable.moved = False # Prevent further processing like random encounters
                             return # Player is blocked, cutscene starts
 

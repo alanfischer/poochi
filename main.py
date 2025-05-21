@@ -253,7 +253,7 @@ def setup_map():
 
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position), scene_surface.get_width(), scene_surface.get_height())
     render_system = RenderSystem(scene_surface, camera_system, TILE_SIZE)
-    cutscene_system = CutsceneSystem(scene_surface)
+    cutscene_system = CutsceneSystem(scene_surface, render_system)
     encounter_system = EncounterSystem(scene_surface, cutscene_system, TILE_SIZE, 0.1)
     movement_system = MovementSystem(camera_system, cutscene_system, TILE_SIZE, encounter_system)
     music_system = MusicSystem(cutscene_system)
@@ -299,6 +299,12 @@ def setup_map():
                     esper.add_component(terrain, connections)
                 elif name == 'hogwarts_castle':
                     esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hogwarts.mp3', 'hogwarts_cutscene'))
+                    esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+                elif name == 'hut':
+                    esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hagrid.mp3', 'hagrid_cutscene'))
+                    esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
+                elif name == 'flute':
+                    esper.add_component(terrain, Cutscene('hogwarts_cutscene.png', 'hagrid.mp3', 'flute_cutscene'))
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 else:
                     esper.add_component(terrain, Renderable(get_tile_from_name(name), z))

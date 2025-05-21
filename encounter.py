@@ -1,6 +1,5 @@
 import esper
 import random
-import pygame
 from components import *
 from battle_scene import create_battle
 from cutscene_system import *
@@ -14,16 +13,16 @@ class EncounterSystem(esper.Processor):
         self.TILE_SIZE = tile_size
         self.cutscene_system = cutscene_system
 
-    def start_world_cutscene(self, cutscene_data):
+    def start_world_cutscene(self, cutscene):
         """Called by MovementSystem to initiate a cutscene triggered by world interaction."""
         # Set the music path in CutsceneSystem for MusicSystem to pick up
-        self.cutscene_system.cutscene_music = cutscene_data.music_path
+        self.cutscene_system.cutscene_music = cutscene.music_path
         
         esper.switch_world("cutscene")
         
         esper.add_processor(self.cutscene_system)
 
-        self.cutscene_system.start_cutscene(cutscene_data.image_path)
+        self.cutscene_system.start_cutscene(cutscene)
 
     def process(self, dt):
         new_world_name = esper.current_world

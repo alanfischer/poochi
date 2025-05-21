@@ -19,31 +19,44 @@ class Cutscene:
 
 # Moved and modified from main.py
 class CutsceneSystem(esper.Processor):
-    def __init__(self, scene_surface):
+    def __init__(self, scene_surface, render_system):
         super().__init__()
         self.scene_surface = scene_surface
-        self.in_cutscene = False
+        self.render_system = render_system
+        self.in_cutscene = None
         self.cutscene_image = None
         self.cutscene_music = None
 
-    def start_cutscene(self, image_path):
-        if self.in_cutscene:
+    def start_cutscene(self, cutscene):
+        if self.in_cutscene is not None:
             return
 
         # Load cutscene image
-        self.cutscene_image = pygame.image.load(image_path)
+        self.cutscene_image = pygame.image.load(cutscene.image_path)
         self.cutscene_image = pygame.transform.scale(self.cutscene_image, 
                                                    (self.scene_surface.get_width(), 
                                                     self.scene_surface.get_height()))
-        self.in_cutscene = True
+        self.in_cutscene = cutscene
 
     def end_cutscene(self):
         if not self.in_cutscene:
             return
-
-        self.in_cutscene = False
-        self.cutscene_image = None
+        
         esper.switch_world("map") # Switch back to map world
+
+        if self.in_cutscene.name == 'flute_cutscene':
+            # Find and delete the flute entity
+            for entity, (terrain, _) in esper.get_components(Terrain, Position):
+                if terrain.type == 'flute':
+                    esper.delete_entity(entity)
+                    # Set player.flute to True
+                    for player_entity, player_component in esper.get_components(Player):
+                        player_component.flute = True
+                        break # Assuming only one player
+                    break
+
+        self.in_cutscene = None
+        self.cutscene_image = None
 
     def process(self, dt):
         if not self.in_cutscene:
