@@ -34,11 +34,11 @@ class CutsceneSystem(esper.Processor):
         if cutscene.name == 'hogwarts_cutscene':
             for entity, [player] in esper.get_components(Player):
                 if player.flute:
-                    from battle_scene import create_battle
-                    create_battle(3, self, self.scene_surface, 16)  # Using battle #3 for flute battle
-                    esper.switch_world('battle')
-                    return
+                    cutscene.music_path = "battle.mp3"
+                    cutscene.image_path = "fluffy.png"
                 break
+
+        self.cutscene_music = cutscene.music_path
 
         # Load cutscene image
         self.cutscene_image = pygame.image.load(cutscene.image_path)
@@ -67,6 +67,15 @@ class CutsceneSystem(esper.Processor):
                         player.flute = True
                         break # Assuming only one player
                     break
+        elif self.in_cutscene.name == 'hogwarts_cutscene':
+            for entity, [player] in esper.get_components(Player):
+                if player.flute:
+                    from battle_scene import create_battle
+                    create_battle(3, self, self.scene_surface, 16)  # Using battle #3 for flute battle
+                    esper.switch_world('battle')
+                    return
+                break
+
 
         self.in_cutscene = None
         self.cutscene_image = None
