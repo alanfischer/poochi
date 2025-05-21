@@ -32,15 +32,8 @@ class CutsceneSystem(esper.Processor):
         if self.in_cutscene:
             return
 
-        # Store current music position and stop it
-        if pygame.mixer.music.get_busy():
-            self.original_music_pos = pygame.mixer.music.get_pos() / 1000.0
-            self.original_music = pygame.mixer.music.get_pos()
-            pygame.mixer.music.stop()
-
         # Load and play cutscene music
-        pygame.mixer.music.load(music_path)
-        pygame.mixer.music.play(-1)
+        self.cutscene_music = music_path # Store for EncounterSystem to use
 
         # Load cutscene image
         self.cutscene_image = pygame.image.load(image_path)
@@ -53,17 +46,10 @@ class CutsceneSystem(esper.Processor):
         if not self.in_cutscene:
             return
 
-        # Stop cutscene music
-        pygame.mixer.music.stop()
-
-        # Restore original music
-        if self.original_music:
-            pygame.mixer.music.load(self.original_music)
-            pygame.mixer.music.play(-1, start=self.original_music_pos)
-
         self.in_cutscene = False
         self.cutscene_image = None
-        self.cutscene_music = None
+        self.cutscene_music = None # This should be cleared
+        esper.switch_world("map") # Switch back to map world
 
     def process(self, dt):
         if not self.in_cutscene:

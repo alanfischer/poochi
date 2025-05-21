@@ -26,7 +26,6 @@ TILES = {
     'hogwarts_castle': ['hogwart_castle.png'],
 }
 PLAYER_FILE = 'harry.png'
-BATTLE_PLAYER_FILE = 'harry_battle.png'
 
 BACKGROUND_FILE = 'background.png'
 
