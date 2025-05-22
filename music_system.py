@@ -30,7 +30,6 @@ class MusicSystem(esper.Processor):
         new_world_name = esper.current_world # esper.current_world is the string name
 
         if self.world != new_world_name:
-            print("World changed")
             previous_world_name = self.world
             self.world = new_world_name
 
@@ -52,7 +51,6 @@ class MusicSystem(esper.Processor):
                         break
                 
                 if fighting_quirl:
-                    print("Fighting Quirl")
                     self._play_music('quirl.mp3')
                 else:
                     self._play_music(self.battle_music_path)
