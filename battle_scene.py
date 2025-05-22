@@ -11,13 +11,15 @@ from enemy_system import *
 TILES = {
     'ledge': ['battle_grass.png'],
     'grass': ['battle_grass.png'],
-    'grass_light': ['battle_grass.png']
+    'grass_light': ['battle_grass.png'],
+    'stone': ['battle_stone.png']
 }
 
 COLORS = {
     'ledge': (184, 19, 29, 255),
     'grass': (184, 19, 29, 255),
-    'grass_light': (184, 19, 29, 255)
+    'grass_light': (184, 19, 29, 255),
+    'stone': (184, 255, 29, 255)
 }
 
 ENEMY_OFFSET = {
@@ -120,7 +122,7 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
 
     # Load and scale background
     if number == 3:
-        background = pygame.image.load("stone.png")
+        background = pygame.image.load("quirl_background.png")
     else:
         background = pygame.image.load("background.png")
     background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
@@ -158,7 +160,7 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
     # Add PhysicsAffected component if it's Quirl
     if number == 3: # Assuming Quirl is battle number 3
         esper.add_component(enemy_entity, PhysicsAffected())
-        esper.add_component(enemy_entity, EnemyAI(left_boundary=-100, right_boundary=100))
+        esper.add_component(enemy_entity, EnemyAI(move_speed=100, left_boundary=-100, right_boundary=100))
     else:
         esper.add_component(enemy_entity, EnemyAI())
 
@@ -187,10 +189,9 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
         for y in range(battle_size[1]):
             color = battle_map.get_at((x, y))
             name = get_tile_name_from_color(color)
-
             z = 0
 
-            if name == 'ledge' or name == 'grass' or name == 'grass_light':
+            if name == 'ledge' or name == 'grass' or name == 'grass_light' or name == 'stone':
                 terrain = esper.create_entity()
                 esper.add_component(terrain, Renderable(get_tile_from_name(name), z))
                 # Apply the offset to center the terrain

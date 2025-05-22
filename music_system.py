@@ -1,6 +1,6 @@
 import esper
 import pygame
-
+from components import Enemy
 class MusicSystem(esper.Processor):
     def __init__(self, cutscene_system_ref, map_music_path='main.mp3', battle_music_path='battle.mp3'):
         self.cutscene_system = cutscene_system_ref  # Reference to get cutscene specific music
@@ -30,6 +30,7 @@ class MusicSystem(esper.Processor):
         new_world_name = esper.current_world # esper.current_world is the string name
 
         if self.world != new_world_name:
+            print("World changed")
             previous_world_name = self.world
             self.world = new_world_name
 
@@ -43,7 +44,18 @@ class MusicSystem(esper.Processor):
             if new_world_name == "map":
                 self._play_music(self.map_music_path, start_ms=self.map_music_resume_pos_ms)
             elif new_world_name == "battle":
-                self._play_music(self.battle_music_path)
+                # Check if fighting Quirl by looking for Enemy component with quirl=True
+                fighting_quirl = False
+                for _, [enemy]in esper.get_components(Enemy):
+                    if enemy.quirl:
+                        fighting_quirl = True
+                        break
+                
+                if fighting_quirl:
+                    print("Fighting Quirl")
+                    self._play_music('quirl.mp3')
+                else:
+                    self._play_music(self.battle_music_path)
             elif new_world_name == "cutscene":
                 # cutscene_music attribute in CutsceneSystem holds the path string
                 cutscene_music_path = self.cutscene_system.cutscene_music 

@@ -28,6 +28,9 @@ class CutsceneSystem(esper.Processor):
         self.cutscene_music = None
         self.cutscene_start_time = None # Added to track cutscene start time
 
+    def set_music_system(self, music_system):
+        self.music_system = music_system
+
     def start_cutscene(self, cutscene):
         if self.in_cutscene is not None:
             return
@@ -61,6 +64,7 @@ class CutsceneSystem(esper.Processor):
 
         esper.switch_world("cutscene")
         esper.add_processor(self)
+        esper.add_processor(self.music_system)
 
     def end_cutscene(self):
         if not self.in_cutscene:

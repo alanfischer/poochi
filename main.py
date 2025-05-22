@@ -257,6 +257,7 @@ def setup_map():
     encounter_system = EncounterSystem(scene_surface, cutscene_system, TILE_SIZE, 0.05)
     movement_system = MovementSystem(camera_system, cutscene_system, TILE_SIZE, encounter_system)
     music_system = MusicSystem(cutscene_system)
+    cutscene_system.set_music_system(music_system)
 
     esper.add_processor(camera_system)
     esper.add_processor(render_system)

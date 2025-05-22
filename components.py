@@ -5,7 +5,7 @@ class Player:
         self.frame = 0
         self.last_frame_time = 0
         self.firing_start_time = None
-        self.flute = True
+        self.flute = False
         self.fluffy = 0
 
 class Terrain:
@@ -61,9 +61,9 @@ class Enemy:
         self.quirl = quirl
 
 class EnemyAI:
-    def __init__(self, left_boundary = 10, right_boundary = 100):
+    def __init__(self, move_speed = 60, left_boundary = 10, right_boundary = 100):
         self.move_direction = 1  # 1 for right, -1 for left
-        self.move_speed = 60  # pixels per second
+        self.move_speed = move_speed  # pixels per second
         self.right_boundary = right_boundary
         self.left_boundary = left_boundary
 
