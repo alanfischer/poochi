@@ -57,196 +57,172 @@ class BattleSystem(esper.Processor):
             else:
                 position.x -= projectile.speed * dt
 
-        for entity, (player, position, moveable, renderable) in esper.get_components(Player, Position, Moveable, Renderable):
-            # Get the actual bounds of the player sprite
-            # Use the base image for collision detection
-            base_image = player.images[player.direction][0]
-            bbox = base_image.get_bounding_rect()
-            player_width = bbox.width
-            player_height = bbox.height
+        # Process entities with physics (Player and PhysicsAffected enemies like Quirl)
+        for entity, (pos, moveable, renderable, _) in esper.get_components(Position, Moveable, Renderable, PhysicsAffected):
+            is_player_entity = esper.has_component(entity, Player)
             
-            # Handle firing
-            if keys[pygame.K_f] and player.firing_start_time is None:
-                player.firing_start_time = current_time
-                # Create projectile at player's position
-                self.create_projectile(position.x, position.y, player.direction)
-            elif player.firing_start_time is not None and current_time - player.firing_start_time >= 0.25:
-                player.firing_start_time = None
+            entity_width = 0
+            entity_height = 0
 
-            # Store original position
-            original_x = position.x
-            original_y = position.y
-            
-            # Calculate movement deltas with delta time
-            dx = 0
-            if keys[pygame.K_LEFT]:
-                dx = -self.move_speed * dt
-                player.direction = 'left'
-                self.animate(player)
-            elif keys[pygame.K_RIGHT]:
-                dx = self.move_speed * dt
-                player.direction = 'right'
-                self.animate(player)
-
-            # Apply horizontal movement with continuous collision check
-            if dx != 0:
-                # Move in smaller steps to prevent tunneling
-                remaining_dx = dx
-                step_size = 1 if dx > 0 else -1
+            if is_player_entity:
+                player = esper.component_for_entity(entity, Player)
+                base_image = player.images[player.direction][0]
+                bbox = base_image.get_bounding_rect()
+                entity_width = bbox.width
+                entity_height = bbox.height
                 
-                while abs(remaining_dx) > 0:
-                    # Calculate step size for this iteration
-                    this_step = step_size if abs(remaining_dx) > 1 else remaining_dx
-                    
-                    # Try to move
-                    position.x += this_step
-                    
-                    # Check collision at new position
-                    player_rect = pygame.Rect(
-                        int(position.x - player_width // 2),
-                        int(position.y - player_height // 2),
-                        player_width,
-                        player_height
-                    )
-                    
-                    # If collision occurred, revert the step and stop
-                    collisions = self.get_colliding_tiles(player_rect)
-                    if collisions:
-                        position.x -= this_step
-                        break
-                    
-                    remaining_dx -= this_step
+                # Player-specific input and actions
+                # Handle firing
+                if keys[pygame.K_f] and player.firing_start_time is None:
+                    player.firing_start_time = current_time
+                    self.create_projectile(pos.x, pos.y, player.direction)
+                elif player.firing_start_time is not None and current_time - player.firing_start_time >= 0.25:
+                    player.firing_start_time = None
+
+                # Horizontal movement for player
+                dx = 0
+                if keys[pygame.K_LEFT]:
+                    dx = -self.move_speed * dt
+                    player.direction = 'left'
+                    self.animate(player)
+                elif keys[pygame.K_RIGHT]:
+                    dx = self.move_speed * dt
+                    player.direction = 'right'
+                    self.animate(player)
+
+                if dx != 0:
+                    remaining_dx = dx
+                    step_size = 1 if dx > 0 else -1
+                    while abs(remaining_dx) > 0:
+                        this_step = step_size if abs(remaining_dx) > 1 else remaining_dx
+                        pos.x += this_step
+                        entity_rect = pygame.Rect(
+                            int(pos.x - entity_width // 2), int(pos.y - entity_height // 2),
+                            entity_width, entity_height
+                        )
+                        if self.get_colliding_tiles(entity_rect):
+                            pos.x -= this_step
+                            break
+                        remaining_dx -= this_step
+                    moveable.on_ground = self.check_if_on_ground(pos, entity_width, entity_height, is_player_entity)
+
+                # Enforce horizontal boundaries for Player
+                if pos.x < self.left_boundary:
+                    pos.x = self.left_boundary
+                elif pos.x > self.right_boundary:
+                    pos.x = self.right_boundary
                 
-                # After horizontal movement, verify if we're still on ground
-                moveable.on_ground = self.check_if_on_ground(position, player_width, player_height)
+                # Player Jumping
+                if keys[pygame.K_SPACE] and moveable.on_ground:
+                    moveable.velocity_y = -self.jump_strength
+                    moveable.on_ground = False
+                
+                if keys[pygame.K_ESCAPE]:
+                    esper.switch_world('map')
 
-            # Enforce horizontal boundaries
-            if position.x < self.left_boundary:
-                position.x = self.left_boundary
-            elif position.x > self.right_boundary:
-                position.x = self.right_boundary
+            else: # For non-player PhysicsAffected entities (e.g., Quirl)
+                # AI or other non-player movement will be handled by EnemySystem for Quirl
+                # Here we just need to get its dimensions for physics
+                enemy_comp = esper.component_for_entity(entity, Enemy) # Assuming Quirl has Enemy component
+                base_image = enemy_comp.images[enemy_comp.direction][0] # Use current direction/frame
+                bbox = base_image.get_bounding_rect()
+                entity_width = bbox.width
+                entity_height = bbox.height
 
-            # Handle jumping
-            if keys[pygame.K_SPACE] and moveable.on_ground:
-                moveable.velocity_y = -self.jump_strength
-                moveable.on_ground = False
 
-            if keys[pygame.K_ESCAPE]:
-                esper.switch_world('map')
-
-            # Apply gravity with delta time
+            # Common Physics: Gravity and Vertical Collision for all PhysicsAffected entities
             moveable.velocity_y += self.gravity * dt
-            
-            # Clamp maximum fall speed to prevent tunneling
             max_fall_speed = 300
             moveable.velocity_y = min(moveable.velocity_y, max_fall_speed)
             
-            # Calculate vertical movement
             dy = moveable.velocity_y * dt
             
-            # Check if we're still on ground before moving
             was_on_ground = moveable.on_ground
             
-            # Apply vertical movement with continuous collision check
             if dy != 0:
-                # Move in smaller steps to prevent tunneling
                 remaining_dy = dy
                 step_size = 1 if dy > 0 else -1
                 
-                # Only reset on_ground if we're moving upward or were already in the air
                 if step_size < 0 or not was_on_ground:
                     moveable.on_ground = False
                 
                 while abs(remaining_dy) > 0:
-                    # Calculate step size for this iteration
                     this_step = step_size if abs(remaining_dy) > 1 else remaining_dy
-                    
-                    # Try to move
-                    position.y += this_step
-                    
-                    # Check collision at new position
-                    player_rect = pygame.Rect(
-                        int(position.x - player_width // 2),
-                        int(position.y - player_height // 2),
-                        player_width,
-                        player_height
+                    pos.y += this_step
+                    entity_rect = pygame.Rect(
+                        int(pos.x - entity_width // 2), int(pos.y - entity_height // 2),
+                        entity_width, entity_height
                     )
-                    
-                    # If collision occurred, handle it and stop
-                    collisions = self.get_colliding_tiles(player_rect)
-                    if collisions:
-                        position.y -= this_step  # Revert the step
-                        moveable.velocity_y = 0  # Stop vertical movement
-                        
-                        if step_size > 0:  # Moving down
-                            moveable.on_ground = True
-                        break
-                    
+                    if entity_width > 0 and entity_height > 0: # Only check collision for valid rects
+                        if self.get_colliding_tiles(entity_rect): # Pass entity_rect for collision
+                            pos.y -= this_step
+                            moveable.velocity_y = 0
+                            if step_size > 0:
+                                moveable.on_ground = True
+                            break
                     remaining_dy -= this_step
                 
-                # After vertical movement, verify if we're still on ground
-                if not moveable.on_ground:  # Only check if we're not already known to be on ground
-                    moveable.on_ground = self.check_if_on_ground(position, player_width, player_height)
+                if not moveable.on_ground and entity_width > 0 and entity_height > 0:
+                    moveable.on_ground = self.check_if_on_ground(pos, entity_width, entity_height, is_player_entity)
 
             # Ground collision as fallback
-            if position.y >= self.ground_y_position:
-                position.y = self.ground_y_position
+            if pos.y >= self.ground_y_position:
+                pos.y = self.ground_y_position
                 moveable.velocity_y = 0
                 moveable.on_ground = True
 
-            # Update image based on movement and firing state
-            if player.firing_start_time is not None:
-                image = 'fire_' + player.direction
-            elif not moveable.on_ground:
-                image = 'jump_' + player.direction
-            else:
-                image = player.direction
+            # Update renderable image for Player
+            if is_player_entity:
+                player = esper.component_for_entity(entity, Player)
+                if player.firing_start_time is not None:
+                    image_key = 'fire_' + player.direction
+                elif not moveable.on_ground:
+                    image_key = 'jump_' + player.direction
+                else:
+                    image_key = player.direction
+                
+                if image_key in player.images:
+                    if player.frame >= len(player.images[image_key]):
+                        player.frame = 0
+                    renderable.image = player.images[image_key][player.frame]
+            # For Quirl, its animation (direction/frame) is handled in EnemySystem based on its AI
 
-            if player.frame >= len(player.images[image]):
-                player.frame = 0
-
-            renderable.image = player.images[image][player.frame]
-
-    def get_colliding_tiles(self, player_rect):
+    def get_colliding_tiles(self, entity_rect): # Changed player_rect to entity_rect
         colliding_tiles = []
-        
         for _, (renderable, position) in esper.get_components(Renderable, Position):
-            # Skip if this is a player or projectile
-            if esper.has_component(_, Player) or esper.has_component(_, Projectile):
+            # Skip if this is a player, an enemy (handled by AI/other checks), or projectile
+            if esper.has_component(_, Player) or esper.has_component(_, Enemy) or esper.has_component(_, Projectile):
                 continue
                 
-            # Get the actual bounds of the non-transparent pixels
             image = renderable.image
-            if image is None:  # Skip if no image
-                continue
-                
-            # Get the bounding box of non-transparent pixels
+            if image is None: continue
             bbox = image.get_bounding_rect()
-            
-            # Create a rect for the tile, accounting for centered position and actual bounds
             tile_rect = pygame.Rect(
-                int(position.x - bbox.width // 2),  # Center based on actual visible width
-                int(position.y - bbox.height // 2),  # Center based on actual visible height
-                bbox.width,
-                bbox.height
+                int(position.x - bbox.width // 2), int(position.y - bbox.height // 2),
+                bbox.width, bbox.height
             )
-            
-            if player_rect.colliderect(tile_rect):
+            if entity_rect.colliderect(tile_rect):
                 colliding_tiles.append((position, tile_rect))
-        
         return colliding_tiles
 
-    def check_if_on_ground(self, position, player_width, player_height):
-        # Check one pixel below the player for ground
+    def check_if_on_ground(self, position, entity_width, entity_height, is_player): # Changed player_width/height
+        # For non-player entities, simpler ground check might be needed if tile collision is too complex or not desired
+        # For now, using the same detailed check.
+        # If entity_width or entity_height is 0, it means we couldn't get dimensions (e.g., non-player without Enemy component)
+        if entity_width == 0 or entity_height == 0:
+             # Fallback to simple y-position check if dimensions are zero
+            return position.y >= self.ground_y_position
+
         ground_check_rect = pygame.Rect(
-            int(position.x - player_width // 2),
-            int(position.y - player_height // 2) + 1,  # Check one pixel below
-            player_width,
-            player_height
+            int(position.x - entity_width // 2),
+            int(position.y - entity_height // 2) + 1,
+            entity_width,
+            entity_height
         )
         
         # Check for tile collisions
+        # If it's not a player, we might want to simplify this or ensure enemies don't collide with all tiles.
+        # For now, using the same logic.
         collisions = self.get_colliding_tiles(ground_check_rect)
         
-        # Also check for world ground
         return bool(collisions) or position.y >= self.ground_y_position

@@ -148,19 +148,25 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
     esper.add_component(player_entity, Renderable(battle_player_images['left'][0], 2))
     esper.add_component(player_entity, Moveable(2))
     esper.add_component(player_entity, Position(0, battle_system.ground_y_position))
+    esper.add_component(player_entity, PhysicsAffected())
 
     # Create enemy
     enemy_entity = esper.create_entity()
-    esper.add_component(enemy_entity, Enemy(enemy_images))
+    esper.add_component(enemy_entity, Enemy(enemy_images, number == 3))
     esper.add_component(enemy_entity, Renderable(enemy_images['right'][0], 2))
     esper.add_component(enemy_entity, Moveable(1))
+    # Add PhysicsAffected component if it's Quirl
+    if number == 3: # Assuming Quirl is battle number 3
+        esper.add_component(enemy_entity, PhysicsAffected())
+        esper.add_component(enemy_entity, EnemyAI(left_boundary=-100, right_boundary=100))
+    else:
+        esper.add_component(enemy_entity, EnemyAI())
 
     # Position enemy based on map dimensions
     enemy_x = ENEMY_OFFSET[number][0]
     enemy_y = ENEMY_OFFSET[number][1]
 
     esper.add_component(enemy_entity, Position(enemy_x, enemy_y))
-    esper.add_component(enemy_entity, EnemyAI())  # New component for enemy behavior
 
     # Create and add systems
     camera_system = CameraSystem(esper.component_for_entity(player_entity, Position),

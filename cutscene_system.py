@@ -87,7 +87,6 @@ class CutsceneSystem(esper.Processor):
                     break
         elif cutscene.name == 'hogwarts_cutscene':
             for entity, [player] in esper.get_components(Player):
-                print("PLAYER FLUFFY: ", player.fluffy)
                 if player.fluffy == 1:
                     self.start_cutscene(cutscene)
                     return

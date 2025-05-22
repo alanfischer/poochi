@@ -50,3 +50,25 @@ class TrackConnections:
         self.down = False
         self.left = False
         self.right = False
+
+
+class Enemy:
+    def __init__(self, images, quirl=False):
+        self.images = images
+        self.direction = 'right'
+        self.frame = 0
+        self.last_frame_time = 0
+        self.quirl = quirl
+
+class EnemyAI:
+    def __init__(self, left_boundary = 10, right_boundary = 100):
+        self.move_direction = 1  # 1 for right, -1 for left
+        self.move_speed = 60  # pixels per second
+        self.right_boundary = right_boundary
+        self.left_boundary = left_boundary
+
+
+class PhysicsAffected:
+    """Marker component for entities affected by physics like gravity."""
+    def __init__(self):
+        pass # No data needed, just its presence matters
