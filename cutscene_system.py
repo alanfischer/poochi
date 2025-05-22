@@ -26,6 +26,7 @@ class CutsceneSystem(esper.Processor):
         self.in_cutscene = None
         self.cutscene_image = None
         self.cutscene_music = None
+        self.cutscene_start_time = None # Added to track cutscene start time
 
     def start_cutscene(self, cutscene):
         if self.in_cutscene is not None:
@@ -34,8 +35,18 @@ class CutsceneSystem(esper.Processor):
         if cutscene.name == 'hogwarts_cutscene':
             for entity, [player] in esper.get_components(Player):
                 if player.flute:
-                    cutscene.music_path = "battle.mp3"
-                    cutscene.image_path = "fluffy.png"
+                    if player.fluffy == 0:
+                        cutscene.music_path = "hagrid.mp3"
+                        cutscene.image_path = "fluffy1_cutscene.png"
+                        player.fluffy = 1
+                    elif player.fluffy == 1:
+                        cutscene.music_path = "hagrid.mp3"
+                        cutscene.image_path = "fluffy2_cutscene.png"
+                        player.fluffy = 2
+                    elif player.fluffy == 2:
+                        cutscene.music_path = "hagrid.mp3"
+                        cutscene.image_path = "fluffy3_cutscene.png"
+                        player.fluffy = 3
                 break
 
         self.cutscene_music = cutscene.music_path
@@ -46,6 +57,7 @@ class CutsceneSystem(esper.Processor):
                                                    (self.scene_surface.get_width(), 
                                                     self.scene_surface.get_height()))
         self.in_cutscene = cutscene
+        self.cutscene_start_time = pygame.time.get_ticks() # Record start time
 
         esper.switch_world("cutscene")
         esper.add_processor(self)
@@ -56,7 +68,13 @@ class CutsceneSystem(esper.Processor):
         
         esper.switch_world("map")
 
-        if self.in_cutscene.name == 'flute_cutscene':
+        cutscene = self.in_cutscene
+
+        self.in_cutscene = None
+        self.cutscene_image = None
+        self.cutscene_start_time = None # Reset start time
+
+        if cutscene.name == 'flute_cutscene':
             # Find and delete the flute entity
             for entity, [terrain] in esper.get_components(Terrain):
                 if terrain.type == 'flute':
@@ -65,11 +83,18 @@ class CutsceneSystem(esper.Processor):
 
                     for entity, [player] in esper.get_components(Player):
                         player.flute = True
-                        break # Assuming only one player
+                        break
                     break
-        elif self.in_cutscene.name == 'hogwarts_cutscene':
+        elif cutscene.name == 'hogwarts_cutscene':
             for entity, [player] in esper.get_components(Player):
-                if player.flute:
+                print("PLAYER FLUFFY: ", player.fluffy)
+                if player.fluffy == 1:
+                    self.start_cutscene(cutscene)
+                    return
+                elif player.fluffy == 2:
+                    self.start_cutscene(cutscene)
+                    return
+                elif player.fluffy == 3:
                     from battle_scene import create_battle
                     create_battle(3, self, self.scene_surface, 16)  # Using battle #3 for flute battle
                     esper.switch_world('battle')
@@ -77,16 +102,14 @@ class CutsceneSystem(esper.Processor):
                 break
 
 
-        self.in_cutscene = None
-        self.cutscene_image = None
-
     def process(self, dt):
         if not self.in_cutscene:
             return
 
-        # Check for space bar to end cutscene
+        # Check for space bar to end cutscene after a delay
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_SPACE]:
+        if keys[pygame.K_SPACE] and self.cutscene_start_time is not None and \
+           (pygame.time.get_ticks() - self.cutscene_start_time >= 1000):
             self.end_cutscene()
             return
 

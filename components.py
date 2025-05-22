@@ -5,8 +5,8 @@ class Player:
         self.frame = 0
         self.last_frame_time = 0
         self.firing_start_time = None
-        self.flute = False
-
+        self.flute = True
+        self.fluffy = 0
 
 class Terrain:
     def __init__(self, type):

@@ -22,7 +22,8 @@ COLORS = {
 
 ENEMY_OFFSET = {
     1: (160, -60),  # Peeves in upper right
-    2: (160, -8)    # Norris in middle right
+    2: (160, -8),    # Norris in middle right
+    3: (160, 20)     # Quirl in lower right
 }
 
 # ===== Asset Loading =====
@@ -82,6 +83,20 @@ norris_images['left'][1].blit(norris_sheet, (0, 0), (16, 0, 16, 16))
 norris_images['right'][0] = pygame.transform.flip(norris_images['left'][0], True, False)
 norris_images['right'][1] = pygame.transform.flip(norris_images['left'][1], True, False)
 
+# Load and process Quirl sprites
+quirl_sheet = pygame.image.load('quirl.png')
+quirl_images = {
+    'left': [pygame.Surface((12, 32), pygame.SRCALPHA), pygame.Surface((12, 32), pygame.SRCALPHA)],
+    'right': [pygame.Surface((12, 32), pygame.SRCALPHA), pygame.Surface((12, 32), pygame.SRCALPHA)],
+}
+
+# Extract Quirl sprites
+quirl_images['right'][0].blit(quirl_sheet, (0, 0), (0, 0, 12, 32))
+quirl_images['right'][1].blit(quirl_sheet, (0, 0), (12, 0, 12, 32))
+quirl_images['left'][0] = pygame.transform.flip(quirl_images['right'][0], True, False)
+quirl_images['left'][1] = pygame.transform.flip(quirl_images['right'][1], True, False)
+
+
 # ===== Helper Functions =====
 
 def get_tile_from_name(name):
@@ -104,15 +119,18 @@ def create_battle(number, encounter_system, scene_surface, TILE_SIZE):
     esper.switch_world("battle")
 
     # Load and scale background
-    background = pygame.image.load("background.png")
+    if number == 3:
+        background = pygame.image.load("stone.png")
+    else:
+        background = pygame.image.load("background.png")
     background = pygame.transform.scale(background, (scene_surface.get_width(), scene_surface.get_height()))
 
     # Choose map and enemy based on number
     battle_map = pygame.image.load(f"grass_map_{number}.png")
-    enemy_images = peeves_images if number == 1 else norris_images
+    enemy_images = peeves_images if number == 1 else norris_images if number == 2 else quirl_images
 
     battle_size = battle_map.get_size()
-
+ 
     # Calculate the total size of the battle map in pixels
     total_map_width = battle_size[0] * TILE_SIZE
     total_map_height = battle_size[1] * TILE_SIZE

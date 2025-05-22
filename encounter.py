@@ -15,8 +15,6 @@ class EncounterSystem(esper.Processor):
 
     def start_world_cutscene(self, cutscene):
         """Called by MovementSystem to initiate a cutscene triggered by world interaction."""
-        # Set the music path in CutsceneSystem for MusicSystem to pick up
-        self.cutscene_system.cutscene_music = cutscene.music_path
         
         self.cutscene_system.start_cutscene(cutscene)
 
